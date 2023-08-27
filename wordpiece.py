@@ -40,19 +40,18 @@ def _pretokenize(text):
 
 def _get_pretoken_frequencies(corpus):
     print("Computing frequencies of pretokens...")
-
     freqs = defaultdict(int)
     for text in tqdm(corpus):
         text = _preprocess(text)
         pretokens = _pretokenize(text)
         for pretoken in pretokens:
             freqs[pretoken] += 1
+    print(f"""Number of pretokens: {len(freqs):,}""")
     return freqs
 
 
 def _build_base_vocabulary(pretokens):
     print("Building base vocabulary...")
-
     base_vocab = list()
     for pretoken in pretokens:
         if pretoken[0] not in base_vocab:
@@ -64,6 +63,7 @@ def _build_base_vocabulary(pretokens):
     base_vocab = ["[PAD]", "[UNK]", "[CLS]", "[SEP]", "[MASK]"] + base_vocab
 
     base_vocab = {char: i for i, char in enumerate(base_vocab)}
+    print(f"""Size of base vocabulary: {len(base_vocab):,}""")
     return base_vocab
 
 
@@ -106,7 +106,8 @@ def _compute_pair_scores(freqs, splits):
         char_freqs[split[-1]] += freq
 
     pair_scores = {
-        # Score : $\text{Frequency of pair} / (text{Frequency of first element of pair} \times text{Frequency of second element of pair})$
+        # Score : $\text{Frequency of pair} / (text{Frequency of first element of pair}
+        # \times text{Frequency of second element of pair})$
         pair: freq / (char_freqs[pair[0]] * char_freqs[pair[1]])
         for pair, freq in pair_freqs.items()
     }
@@ -118,6 +119,7 @@ def build_or_load_vocab(corpus, vocab_size, save_path):
         freqs = _get_pretoken_frequencies(corpus)
         splits = _split_pretokens(pretokens=freqs.keys())
         vocab = _build_base_vocabulary(pretokens=freqs.keys())
+        len(vocab.keys())
         if len(vocab) == vocab_size:
             return vocab
         elif len(vocab) > vocab_size:
