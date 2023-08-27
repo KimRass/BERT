@@ -2,7 +2,8 @@
 VOCAB_SIZE = 30_522
 MAX_LEN = 512
 ### BookCorpus
-DATA_DIR = "/Users/jongbeomkim/Documents/datasets/bookcorpus"
+# DATA_DIR = "/Users/jongbeomkim/Documents/datasets/bookcorpus"
+DATA_DIR = "/Users/jongbeomkim/Documents/datasets/bookcorpus_subset"
 
 ### Architecture
 DROP_PROB = 0.1 # "For the base model, we use a rate of $P_{drop} = 0.1$."
