@@ -10,6 +10,9 @@
 # such as the Billion Word Benchmark."
 
 import sys
+
+sys.path.insert(0, "/Users/jongbeomkim/Desktop/workspace/bert_from_scratch")
+
 import torch
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
@@ -18,7 +21,7 @@ from pathlib import Path
 from tqdm.auto import tqdm
 
 import config
-from wordpiece import encode, build_or_load_vocab
+from pretrain._tokenize import train_bert_tokenizer, load_bert_tokenizer
 
 np.set_printoptions(edgeitems=20, linewidth=sys.maxsize, suppress=False)
 torch.set_printoptions(edgeitems=16, linewidth=sys.maxsize, sci_mode=True)
@@ -42,21 +45,17 @@ class BookCorpusForBERT(Dataset):
     def __init__(
         self,
         data_dir,
-        vocab,
+        tokenizer,
         max_len,
     ):
         self.data_dir = data_dir
-        self.vocab = vocab
+        self.tokenizer = tokenizer
         self.max_len = max_len
 
-        # self.cls_id = tokenizer.token_to_id("[CLS]")
-        # self.sep_id = tokenizer.token_to_id("[SEP]")
-        # self.pad_id = tokenizer.token_to_id("[PAD]")
-        # self.unk_id = tokenizer.token_to_id("[UNK]")
-        self.cls_id = vocab["[CLS]"]
-        self.sep_id = vocab["[SEP]"]
-        self.pad_id = vocab["[PAD]"]
-        self.unk_id = vocab["[UNK]"]
+        self.cls_id = tokenizer.token_to_id("[CLS]")
+        self.sep_id = tokenizer.token_to_id("[SEP]")
+        self.pad_id = tokenizer.token_to_id("[PAD]")
+        self.unk_id = tokenizer.token_to_id("[UNK]")
 
         self.parags = self._get_parags()
         self.data = self._get_data(self.parags)
@@ -69,11 +68,10 @@ class BookCorpusForBERT(Dataset):
                 if parag == "":
                     continue
 
-                # token_ids = self.tokenizer.encode(parag).ids
-                token_ids = encode(parag, vocab=self.vocab)
+                token_ids = self.tokenizer.encode(parag).ids
                 parags.append(
                     {
-                        "document": str(doc_path), "paragraph": parag, "token_ids": token_ids
+                        "document": str(doc_path), "paragraph": parag, "token_ids": token_ids,
                     }
                 )
         return parags
@@ -127,20 +125,17 @@ class BookCorpusForBERT(Dataset):
 
 
 if __name__ == "__main__":
-    corpus = get_bookcorpus_corpus(config.DATA_DIR)
-    vocab = build_or_load_vocab(
-        corpus=corpus,
-        vocab_size=config.VOCAB_SIZE,
-        save_path=Path(__file__).parent/"bookcorpus_vocab.json"
+    corpus_files = list(Path(config.EPUBTXT_DIR).glob("*.txt"))
+    if Path(config.VOCAB_PATH).exists():
+        tokenizer = load_bert_tokenizer(config.VOCAB_PATH)
+    else:
+        tokenizer = train_bert_tokenizer(
+            vocab_size=config.VOCAB_SIZE,
+            vocab_path=config.VOCAB_PATH,
+            corpus_files=corpus_files,
+            post_processor=True,
+        )
+    ds = BookCorpusForBERT(
+        data_dir=config.EPUBTXT_DIR, tokenizer=tokenizer, max_len=config.MAX_LEN
     )
-    ds = BookCorpusForBERT(data_dir=config.DATA_DIR, vocab=vocab, max_len=config.MAX_LEN)
-    # MAX_LEN = 512
-    # BATCH_SIZE = 8
-
-    # data_dir = "/Users/jongbeomkim/Documents/datasets/bookcorpus_subset"
-    # vocab_path = "/Users/jongbeomkim/Desktop/workspace/transformer_based_models/bert/vocab_example.json"
-    # tokenizer = prepare_bert_tokenizer(vocab_path=vocab_path)
-    # tokenizer.encode("[CLS]").tokens
-    # dl = DataLoader(dataset=ds, batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
-    # for batch, (token_ids, seg_ids, is_next) in enumerate(dl, start=1):
-    #   token_ids
+    ds[100]

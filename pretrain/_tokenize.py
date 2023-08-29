@@ -8,32 +8,32 @@ from tokenizers.pre_tokenizers import Whitespace
 from tokenizers.processors import TemplateProcessing
 from tokenizers.trainers import WordPieceTrainer
 from tokenizers import decoders
-from pathlib import Path
-
-VOCAB_SIZE = 30_522
 
 
-def prepare_bert_tokenizer(vocab_path, corpus_files=None, post_processor=False):
-    if not Path(vocab_path).exists():
-        tokenizer = Tokenizer(WordPiece(unk_token="[UNK]"))
-        tokenizer.normalizer = normalizers.Sequence([NFD(), Lowercase(), StripAccents()])
-        tokenizer.pre_tokenizer = Whitespace()
-
-        trainer = WordPieceTrainer(
-            vocab_size=VOCAB_SIZE, special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]"]
-        )
-        tokenizer.train(files=corpus_files, trainer=trainer)
-        tokenizer.save(vocab_path)
-
-    tokenizer = Tokenizer.from_file(vocab_path)
-    tokenizer.decoder = decoders.WordPiece()
-
+def train_bert_tokenizer(
+    vocab_size, vocab_path, corpus_files, post_processor=False
+):
+    tokenizer = Tokenizer(WordPiece(unk_token="[UNK]"))
+    tokenizer.normalizer = normalizers.Sequence([NFD(), Lowercase(), StripAccents()])
+    tokenizer.pre_tokenizer = Whitespace()
     if post_processor:
         tokenizer.post_processor = TemplateProcessing(
             single="[CLS] $A [SEP]",
             pair="[CLS] $A [SEP] $B:1 [SEP]:1",
             special_tokens=[("[CLS]", 1), ("[SEP]", 2)],
         )
+    tokenizer.decoder = decoders.WordPiece()
+
+    trainer = WordPieceTrainer(
+        vocab_size=vocab_size, special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]"]
+    )
+    corpus_files = list(map(str, corpus_files))
+    tokenizer.train(files=corpus_files, trainer=trainer)
+    tokenizer.save(vocab_path)
+
+
+def load_bert_tokenizer(vocab_path):
+    tokenizer = Tokenizer.from_file(vocab_path)
     return tokenizer
 
 
