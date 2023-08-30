@@ -1,7 +1,10 @@
-from pathlib import Path
+import torch
+import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.optim import Adam
+from torch.cuda.amp import GradScaler
 from tqdm.auto import tqdm
+from pathlib import Path
 
 import config
 from pretrain.wordpiece import train_bert_tokenizer, load_bert_tokenizer
@@ -35,6 +38,8 @@ dl = DataLoader(
 di = iter(dl)
 
 model = BERTBaseLM(vocab_size=config.VOCAB_SIZE).to(config.DEVICE)
+if config.N_GPUS > 1:
+    model = nn.DataParallel(model)
 
 optim = Adam(
     model.parameters(),
@@ -42,6 +47,8 @@ optim = Adam(
     betas=(config.BETA1, config.BETA2),
     weight_decay=config.WEIGHT_DECAY,
 )
+
+scaler = GradScaler(enabled=True if config.AUTOCAST else False)
 
 crit = PretrainingLoss()
 
@@ -57,14 +64,23 @@ for step in range(init_step + 1, config.N_STEPS + 1):
     seg_ids = seg_ids.to(config.DEVICE)
     is_next = is_next.to(config.DEVICE)
 
-    nsp_pred, mlm_pred = model(seq=token_ids, seg_ids=seg_ids)
-    loss = crit(
-        mlm_pred=mlm_pred, nsp_pred=nsp_pred, token_ids=token_ids, is_next=is_next,
-    )
-
+    with torch.autocast(
+        device_type=config.DEVICE.type,
+        dtype=torch.float16,
+        enabled=True if config.AUTOCAST else False,
+    ):
+        nsp_pred, mlm_pred = model(seq=token_ids, seg_ids=seg_ids)
+        loss = crit(
+            mlm_pred=mlm_pred, nsp_pred=nsp_pred, token_ids=token_ids, is_next=is_next,
+        )
     optim.zero_grad()
-    loss.backward()
-    optim.step()
+    if config.AUTOCAST:
+        scaler.scale(loss).backward()
+        scaler.step(optim)
+        scaler.update()
+    else:
+        loss.backward()
+        optim.step()
 
     running_loss += loss.item()
     if (step % config.N_PRINT_STEPS == 0) or (step == config.N_STEPS):
