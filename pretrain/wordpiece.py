@@ -36,5 +36,5 @@ def train_bert_tokenizer(
 
 
 def load_bert_tokenizer(vocab_path):
-    tokenizer = Tokenizer.from_file(vocab_path)
+    tokenizer = Tokenizer.from_file(str(vocab_path))
     return tokenizer
