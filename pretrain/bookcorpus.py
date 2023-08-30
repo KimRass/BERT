@@ -88,10 +88,10 @@ class BookCorpusForBERT(Dataset):
 
         for idx1 in tqdm(range(len(parags) - 1)):
             if random.random() < 0.5:
-                is_next = True
+                is_next = 1
                 idx2 = idx1 + 1
             else:
-                is_next = False
+                is_next = 0
                 idx2 = random.randrange(len(parags))
 
             parag1 = parags[idx1]["paragraph"]
@@ -145,4 +145,4 @@ if __name__ == "__main__":
     ds = BookCorpusForBERT(
         epubtxt_dir=config.EPUBTXT_DIR, tokenizer=tokenizer, max_len=config.MAX_LEN
     )
-    ds[10]
+    token_ids, seg_ids, is_next = ds[10]
