@@ -16,7 +16,8 @@ class PositionalEncoding(nn.Module):
 
         pos = torch.arange(max_len).unsqueeze(1) # "$pos$"
         i = torch.arange(dim // 2).unsqueeze(0) # "$i$"
-        angle = pos / (10_000 ** (2 * i / dim)) # "$\sin(\text{pos} / 10000^{2 * i  / d_{\text{model}}})$"
+         # "$\sin(\text{pos} / 10000^{2 * i  / d_{\text{model}}})$"
+        angle = pos / (10_000 ** (2 * i / dim))
 
         self.pe_mat = torch.zeros(size=(max_len, dim))
         self.pe_mat[:, 0:: 2] = torch.sin(angle) # "$text{PE}_(\text{pos}, 2i)$"
@@ -51,7 +52,6 @@ class MultiHeadAttention(nn.Module):
         return attn_score
 
     def forward(self, q, k, v, mask=None):
-        # print(q.shape, k.shape, v.shape)
         b, l, _ = q.shape
 
         q, k, v = self.q_proj(q), self.k_proj(k), self.v_proj(v)
@@ -71,26 +71,6 @@ class MultiHeadAttention(nn.Module):
         x = rearrange(x, pattern="b n i d -> b i (n d)")
 
         x = self.out_proj(x)
-        return x
-
-
-class ResidualConnection(nn.Module):
-    def __init__(self, dim, drop_prob=0.1):
-        super().__init__()
-
-        self.dim = dim
-        self.drop_prob = drop_prob
-
-        self.resid_drop = nn.Dropout(drop_prob) # "Residual dropout"
-        self.norm = nn.LayerNorm(dim)
-
-    def forward(self, x, sublayer):
-        out = sublayer(x) # "Multi-Head Attention", "Masked Multi-Head Attention" or "Feed Forward"
-            # in "Figure 1" of the paper
-        out = self.resid_drop(out) # "We apply dropout to the output of each sub-layer,
-            # before it is added to the sub-layer input and normalized."
-        x += out # "Add"
-        x = self.norm(x) # "& Norm"
         return x
 
 
@@ -124,6 +104,25 @@ class PositionwiseFeedForward(nn.Module):
         return x
 
 
+class ResidualConnection(nn.Module):
+    def __init__(self, dim, drop_prob=0.1):
+        super().__init__()
+
+        self.dim = dim
+        self.drop_prob = drop_prob
+
+        self.norm = nn.LayerNorm(dim)
+        self.resid_drop = nn.Dropout(drop_prob) # "Residual dropout"
+
+    def forward(self, x, sublayer):
+        skip = x.clone()
+        x = self.norm(x)
+        x = sublayer(x)
+        x = self.resid_drop(x)
+        x += skip
+        return x
+
+
 class TokenEmbedding(nn.Embedding):
     def __init__(self, vocab_size, embed_size, pad_id=0):
         super().__init__(num_embeddings=vocab_size, embedding_dim=embed_size, padding_idx=pad_id)
@@ -137,24 +136,6 @@ class SegmentEmbedding(nn.Embedding):
 class PositionEmbedding(PositionalEncoding):
     def __init__(self, embed_size):
         super().__init__(dim=embed_size)
-
-
-class ResidualConnection(nn.Module):
-    def __init__(self, dim, drop_prob=0.1):
-        super().__init__()
-
-        self.dim = dim
-        self.drop_prob = drop_prob
-
-        self.norm = nn.LayerNorm(dim)
-        self.resid_drop = nn.Dropout(drop_prob)
-
-    def forward(self, x, sublayer):
-        out = self.norm(x)
-        out = sublayer(out)
-        out = self.resid_drop(out)
-        x += out
-        return x
 
 
 class TransformerLayer(nn.Module):
