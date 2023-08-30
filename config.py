@@ -3,8 +3,9 @@ VOCAB_SIZE = 30_522
 MAX_LEN = 512
 ### BookCorpus
 EPUBTXT_DIR = "/Users/jongbeomkim/Documents/datasets/bookcorpus/epubtxt"
-# EPUBTXT_DIR = "/Users/jongbeomkim/Documents/datasets/bookcorpus_subset"
+# config.EPUBTXT_DIR = "/Users/jongbeomkim/Documents/datasets/bookcorpus_subset/epubtxt"
 VOCAB_PATH = "/Users/jongbeomkim/Desktop/workspace/bert_from_scratch/pretrain/bookcorpus_vocab.json"
+MIN_FREQ = 5
 
 ### Architecture
 DROP_PROB = 0.1 # "For the base model, we use a rate of $P_{drop} = 0.1$."
