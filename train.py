@@ -6,11 +6,7 @@ from tqdm.auto import tqdm
 import config
 from pretrain.wordpiece import train_bert_tokenizer, load_bert_tokenizer
 from pretrain.bookcorpus import BookCorpusForBERT
-from model import (
-    BERTBase,
-    MaskedLanguageModelHead,
-    NextSentencePredictionHead
-)
+from model import BERTBaseLM
 from pretrain.loss import PretrainingLoss
 
 
@@ -38,9 +34,7 @@ dl = DataLoader(
 )
 di = iter(dl)
 
-model = BERTBase(vocab_size=config.VOCAB_SIZE).to(config.DEVICE)
-mlm_head = MaskedLanguageModelHead(vocab_size=config.VOCAB_SIZE)
-nsp_head = NextSentencePredictionHead()
+model = BERTBaseLM(vocab_size=config.VOCAB_SIZE).to(config.DEVICE)
 
 optim = Adam(
     model.parameters(),
@@ -63,10 +57,10 @@ for step in range(init_step + 1, config.N_STEPS + 1):
     seg_ids = seg_ids.to(config.DEVICE)
     is_next = is_next.to(config.DEVICE)
 
-    pred = model(seq=token_ids, seg_label=seg_ids)
-    mlm_logit = mlm_head(pred)
-    nsp_logit = nsp_head(pred)
-    loss = crit(mlm_logit=mlm_logit, nsp_logit=nsp_logit, label=is_next)
+    nsp_pred, mlm_pred = model(seq=token_ids, seg_ids=seg_ids)
+    loss = crit(
+        mlm_pred=mlm_pred, nsp_pred=nsp_pred, token_ids=token_ids, is_next=is_next,
+    )
 
     optim.zero_grad()
     loss.backward()

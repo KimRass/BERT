@@ -10,14 +10,14 @@ class PretrainingLoss(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(self, mlm_logit, nsp_logit, label):
+    def forward(self, mlm_pred, nsp_pred, token_ids, is_next):
         raw_mlm_loss = F.cross_entropy(
-            mlm_logit.permute(0, 2, 1), label["ground_truth_ids"], reduction="none"
+            mlm_pred.permute(0, 2, 1), token_ids, reduction="none",
         )
-        raw_mlm_loss *= label["prediction_target"]
+        # raw_mlm_loss *= gt["prediction_target"]
         mlm_loss = raw_mlm_loss.sum()
 
-        nsp_loss = F.cross_entropy(nsp_logit, label["is_next"])
+        nsp_loss = F.cross_entropy(nsp_pred, is_next)
         loss = mlm_loss + nsp_loss
         return loss
 
@@ -39,10 +39,10 @@ class PretrainingLoss(nn.Module):
 #     ds = BookCorpusForBERT(vocab_path=vocab_path, corpus_dir=corpus_dir, seq_len=SEQ_LEN)
 #     dl = DataLoader(dataset=ds, batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
 #     for batch, data in enumerate(dl, start=1):
-#         bert_out = bert(seq=data["masked_ids"], seg_label=data["segment_label"])
-#         mlm_logit = mlm_head(bert_out)
-#         nsp_logit = nsp_head(bert_out)
+#         bert_out = bert(seq=data["masked_ids"], seg_gt=data["segment_gt"])
+#         mlm_pred = mlm_head(bert_out)
+#         nsp_pred = nsp_head(bert_out)
         
-#         criterion(mlm_logit=mlm_logit, nsp_logit=nsp_logit, label=data)
+#         criterion(mlm_pred=mlm_pred, nsp_pred=nsp_pred, gt=data)
         
-#         bert_out.shape, mlm_logit.shape, nsp_logit.shape
+#         bert_out.shape, mlm_pred.shape, nsp_pred.shape
