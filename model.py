@@ -290,7 +290,7 @@ class ClassificationHead(nn.Module):
         return x
 
 
-class MaskedLanguageModelHead(nn.Module):
+class MLMHead(nn.Module):
     def __init__(self, vocab_size, hidden_size=768, drop_prob=0.1):
         super().__init__()
 
@@ -306,7 +306,7 @@ class MaskedLanguageModelHead(nn.Module):
         return x
 
 
-class NextSentencePredictionHead(nn.Module):
+class NSPHead(nn.Module):
     def __init__(self, hidden_size=768, drop_prob=0.1):
         super().__init__()
 
@@ -320,6 +320,28 @@ class NextSentencePredictionHead(nn.Module):
         x = self.cls_proj(x)
         x = self.head_drop(x)
         return x
+
+
+class BERTBaseLM(nn.Module):
+    """
+    BERT Language Model
+    Next Sentence Prediction Model + Masked Language Model
+    """
+    def __init__(self, bert: BERTBase, vocab_size):
+        """
+        :param bert: BERT model which should be trained
+        :param vocab_size: total vocab size for masked_lm
+        """
+        super().__init__()
+
+        self.bert = bert
+
+        self.nsp_head = NSPHead(bert.hidden_size)
+        self.mlm_head = MLMHead(vocab_size=bert.vocab_size, hidden_size=bert.hidden_size)
+
+    def forward(self, seq, seg_ids):
+        x = self.bert(seq=seq, seg_ids=seg_ids)
+        return self.nsp_head(x), self.mlm_head(x)
 
 
 class QuestionAnsweringHead(nn.Module):
