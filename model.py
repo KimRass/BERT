@@ -126,12 +126,12 @@ class PositionwiseFeedForward(nn.Module):
 
 class TokenEmbedding(nn.Embedding):
     def __init__(self, vocab_size, embed_size, pad_id=0):
-        super().__init__(num_embeddings=vocab_size, embedding_size=embed_size, padding_idx=pad_id)
+        super().__init__(num_embeddings=vocab_size, embedding_dim=embed_size, padding_idx=pad_id)
 
 
 class SegmentEmbedding(nn.Embedding):
     def __init__(self, embed_size, pad_id=0):
-        super().__init__(num_embeddings=2, embedding_size=embed_size, padding_idx=pad_id)
+        super().__init__(num_embeddings=2, embedding_dim=embed_size, padding_idx=pad_id)
 
 
 class PositionEmbedding(PositionalEncoding):
