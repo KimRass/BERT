@@ -26,7 +26,7 @@ class PositionalEncoding(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         _, l, _ = x.shape
-        x += self.pe_mat.unsqueeze(0)[:, : l, :]
+        x += self.pe_mat.unsqueeze(0)[:, : l, :].to(x.device)
         return x
 
 
