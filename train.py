@@ -69,6 +69,7 @@ if __name__ == "__main__":
 
     init_step = 0
     running_loss = 0
+    step_cnt = 0
     for step in range(init_step + 1, config.N_STEPS + 1):
         try:
             token_ids, seg_ids, is_next = next(di)
@@ -98,6 +99,9 @@ if __name__ == "__main__":
             optim.step()
 
         running_loss += loss.item()
+        step_cnt += 1
         if (step % config.N_PRINT_STEPS == 0) or (step == config.N_STEPS):
             print(f"""[ {step:,}/{config.N_STEPS:,} ]""", end="")
-            print(f"""[ {running_loss / config.N_PRINT_STEPS} ]""")
+            print(f"""[ {running_loss / step_cnt} ]""")
+
+            running_loss = 0
