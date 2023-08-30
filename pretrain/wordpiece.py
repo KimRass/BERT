@@ -11,7 +11,7 @@ from tokenizers import decoders
 
 
 def train_bert_tokenizer(
-    vocab_size, vocab_path, corpus_files, post_processor=False
+    vocab_size, vocab_path, min_freq, corpus_files, post_processor=False
 ):
     tokenizer = Tokenizer(WordPiece(unk_token="[UNK]"))
     tokenizer.normalizer = normalizers.Sequence([NFD(), Lowercase(), StripAccents()])
@@ -25,7 +25,10 @@ def train_bert_tokenizer(
     tokenizer.decoder = decoders.WordPiece()
 
     trainer = WordPieceTrainer(
-        vocab_size=vocab_size, special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]"]
+        vocab_size=vocab_size,
+        min_frequency=min_freq,
+        limit_alphabet=vocab_size // 5,
+        special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]"]
     )
     corpus_files = list(map(str, corpus_files))
     tokenizer.train(files=corpus_files, trainer=trainer)
@@ -35,16 +38,3 @@ def train_bert_tokenizer(
 def load_bert_tokenizer(vocab_path):
     tokenizer = Tokenizer.from_file(vocab_path)
     return tokenizer
-
-
-if __name__ == "__main__":
-    corpus_files = [
-        f"""/Users/jongbeomkim/Documents/datasets/wikitext-103-raw/wiki.{split}.raw"""
-        # for split in ["test", "train", "valid"]
-        for split in ["train"]
-    ]
-    vocab_path = "/Users/jongbeomkim/Desktop/workspace/transformer_based_models/bert/vocab_example.json"
-    tokenizer = prepare_bert_tokenizer(vocab_path=vocab_path, corpus_files=corpus_files)
-
-    output = tokenizer.encode("Hello, y'all! How are you 😁 ?")
-    print(output.tokens, output.ids)
