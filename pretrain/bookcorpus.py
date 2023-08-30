@@ -1,6 +1,5 @@
 # References
     # https://github.com/codertimo/BERT-pytorch/blob/master/bert_pytorch/dataset/dataset.py
-    # # https://d2l.ai/chapter_natural-language-processing-pretraining/bert-dataset.html#sec-bert-dataset
     # https://nn.labml.ai/transformers/mlm/index.html
     # https://d2l.ai/chapter_natural-language-processing-pretraining/bert-dataset.html
 
@@ -22,6 +21,24 @@ from tqdm.auto import tqdm
 
 import config
 from pretrain.wordpiece import train_bert_tokenizer, load_bert_tokenizer
+
+
+# def _get_parags(epubtxt_dir):
+#     parags = list()
+#     for doc_path in tqdm(list(Path(epubtxt_dir).glob("*.txt"))):
+#         for parag in open(doc_path, mode="r", encoding="utf-8"):
+#             parag = parag.strip()
+#             if parag == "":
+#                 continue
+#             # if "テ" in parag:
+#             #     print(doc_path)
+#             token_ids = tokenizer.encode(parag).ids
+#             parags.append(
+#                 {
+#                     "document": str(doc_path), "paragraph": parag, "token_ids": token_ids,
+#                 }
+#             )
+#     return parags
 
 
 class BookCorpusForBERT(Dataset):
@@ -50,8 +67,7 @@ class BookCorpusForBERT(Dataset):
                 parag = parag.strip()
                 if parag == "":
                     continue
-                # if "テ" in parag:
-                #     print(doc_path)
+
                 token_ids = self.tokenizer.encode(parag).ids
                 parags.append(
                     {
@@ -60,7 +76,7 @@ class BookCorpusForBERT(Dataset):
                 )
         return parags
 
-    def _convert_to_bert_input_representation(self, ls_token_ids):
+    def _to_bert_input(self, ls_token_ids):
         token_ids = (
             [self.cls_id] + ls_token_ids[0][: self.max_len - 3] + [self.sep_id] + ls_token_ids[1]
         )[: self.max_len - 1] + [self.sep_id]
@@ -70,17 +86,23 @@ class BookCorpusForBERT(Dataset):
     def _get_data(self, parags):
         data = list()
 
-        for id1 in tqdm(range(len(parags) - 1)):
+        for idx1 in tqdm(range(len(parags) - 1)):
             if random.random() < 0.5:
                 is_next = True
-                id2 = id1 + 1
+                idx2 = idx1 + 1
             else:
                 is_next = False
-                id2 = random.randrange(len(parags))
-            segs = [parags[id1]["paragraph"], parags[id2]["paragraph"]]
-            ls_token_ids = [parags[id1]["token_ids"], parags[id2]["token_ids"]]
+                idx2 = random.randrange(len(parags))
 
-            token_ids = self._convert_to_bert_input_representation(ls_token_ids)
+            parag1 = parags[idx1]["paragraph"]
+            parag2 = parags[idx2]["paragraph"]
+            segs = [parag1, parag2]
+
+            token_ids1 = parags[idx1]["token_ids"]
+            token_ids2 = parags[idx2]["token_ids"]
+            ls_token_ids = [token_ids1, token_ids2]
+
+            token_ids = self._to_bert_input(ls_token_ids)
             data.append(
                 {
                     "segments": segs,
