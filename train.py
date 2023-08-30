@@ -17,16 +17,39 @@ from pretrain.loss import PretrainingLoss
 def get_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--batch_size", type=int, required=True)
+    parser.add_argument("--batch_size", type=int, required=True, default=0)
 
     args = parser.parse_args()
     return args
 
 
+def save_checkpoint(epoch, model, optim, scaler, avg_acc, ckpt_path):
+    Path(ckpt_path).parent.mkdir(parents=True, exist_ok=True)
+
+    ckpt = {
+        "epoch": epoch,
+        "optimizer": optim.state_dict(),
+        "scaler": scaler.state_dict(),
+        "average_accuracy": avg_acc,
+    }
+    if config.N_GPUS > 0 and config.MULTI_GPU:
+        ckpt["model"] = model.module.state_dict()
+    else:
+        ckpt["model"] = model.state_dict()
+
+    torch.save(ckpt, str(ckpt_path))
+
+
 if __name__ == "__main__":
+    # torch.autograd.set_detect_anomaly(True)
+
     args = get_args()
 
-    torch.autograd.set_detect_anomaly(True)
+    BATCH_SIZE = args.batch_size if args.batch_size != 0 else config.BATCH_SIZE
+    N_STEPS = (256 * 512 * 1_000_000) // (BATCH_SIZE * config.MAX_LEN)
+    print(f"""BATCH_SIZE = {BATCH_SIZE}""")
+    print(f"""MAX_LEN = {config.MAX_LEN}""")
+    print(f"""N_STEPS = {N_STEPS}""")
 
     corpus_files = list(Path(config.EPUBTXT_DIR).glob("*.txt"))
     if not Path(config.VOCAB_PATH).exists():
@@ -44,7 +67,7 @@ if __name__ == "__main__":
     )
     dl = DataLoader(
         ds,
-        batch_size=args.batch_size,
+        batch_size=BATCH_SIZE,
         shuffle=True,
         num_workers=config.N_WORKERS,
         pin_memory=True,
