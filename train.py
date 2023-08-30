@@ -12,6 +12,7 @@ from pretrain.bookcorpus import BookCorpusForBERT
 from model import BERTBaseLM
 from pretrain.loss import PretrainingLoss
 
+torch.autograd.set_detect_anomaly(True)
 
 corpus_files = list(Path(config.EPUBTXT_DIR).glob("*.txt"))
 if not Path(config.VOCAB_PATH).exists():
