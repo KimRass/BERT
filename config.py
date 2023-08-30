@@ -31,6 +31,7 @@ if N_GPUS > 0:
 else:
     DEVICE = torch.device("cpu")
     print(f"""Using CPU(s).""")
+AUTOCAST = True
 # BATCH_SIZE = 256
 BATCH_SIZE = 16
 N_STEPS = 1_000_000
