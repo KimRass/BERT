@@ -33,7 +33,7 @@ else:
     print(f"""Using CPU(s).""")
 AUTOCAST = False
 # BATCH_SIZE = 256
-BATCH_SIZE = 16
+BATCH_SIZE = 4
 N_STEPS = 1_000_000
 # "We train with batch size of 256 sequences (256 sequences * 512 tokens = 128,000 tokens/batch) for 1,000,000 steps, which is approximately 40 epochs over the 3.3 billion word corpus. (Comment: 256 * 512 * 1,000,000 / 3,300,000,000 = 39.7)
 N_WORKERS = 4
