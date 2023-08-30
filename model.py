@@ -336,7 +336,7 @@ class BERTBaseLM(nn.Module):
 
         self.bert = BERTBase(vocab_size=vocab_size)
 
-        self.nsp_head = NSPHead(self.bertbert.hidden_size)
+        self.nsp_head = NSPHead(self.bert.hidden_size)
         self.mlm_head = MLMHead(
             vocab_size=self.bert.vocab_size, hidden_size=self.bert.hidden_size,
         )
