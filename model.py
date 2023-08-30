@@ -327,17 +327,19 @@ class BERTBaseLM(nn.Module):
     BERT Language Model
     Next Sentence Prediction Model + Masked Language Model
     """
-    def __init__(self, bert: BERTBase, vocab_size):
+    def __init__(self, vocab_size):
         """
         :param bert: BERT model which should be trained
         :param vocab_size: total vocab size for masked_lm
         """
         super().__init__()
 
-        self.bert = bert
+        self.bert = BERTBase(vocab_size=vocab_size)
 
-        self.nsp_head = NSPHead(bert.hidden_size)
-        self.mlm_head = MLMHead(vocab_size=bert.vocab_size, hidden_size=bert.hidden_size)
+        self.nsp_head = NSPHead(self.bertbert.hidden_size)
+        self.mlm_head = MLMHead(
+            vocab_size=self.bert.vocab_size, hidden_size=self.bert.hidden_size,
+        )
 
     def forward(self, seq, seg_ids):
         x = self.bert(seq=seq, seg_ids=seg_ids)
