@@ -32,7 +32,9 @@ class MaskedLanguageModel(object):
         copied = x.clone()
 
         rand_tensor = torch.rand(x.shape, device=x.device)
-        rand_tensor.masked_fill_(mask=torch.isin(x, torch.as_tensor(self.no_mask_token_ids)), value=1)
+        rand_tensor.masked_fill_(
+            mask=torch.isin(x, torch.as_tensor(self.no_mask_token_ids, device=x.device)), value=1,
+        )
 
         # "Chooses 15% of the token positions at random for prediction."
         select_mask = (rand_tensor < self.select_prob)
@@ -47,7 +49,9 @@ class MaskedLanguageModel(object):
 
         # "(2) a random token 10% of the time
         # (3) the unchanged $i$-th token 10% of the time."
-        random_token_ids = torch.randint(high=self.vocab_size, size=torch.Size((randomize_mask.sum(),)))
+        random_token_ids = torch.randint(
+            high=self.vocab_size, size=torch.Size((randomize_mask.sum(),)),
+        )
         x[randomize_mask.nonzero(as_tuple=True)] = random_token_ids
         # return x, copied
         return x
