@@ -8,6 +8,9 @@ from tokenizers.pre_tokenizers import Whitespace
 from tokenizers.processors import TemplateProcessing
 from tokenizers.trainers import WordPieceTrainer
 from tokenizers import decoders
+from pathlib import Path
+
+import config
 
 
 def train_bert_tokenizer(
@@ -38,3 +41,15 @@ def train_bert_tokenizer(
 def load_bert_tokenizer(vocab_path):
     tokenizer = Tokenizer.from_file(str(vocab_path))
     return tokenizer
+
+
+if __name__ == "__main__":
+    corpus_files = list(Path(config.EPUBTXT_DIR).glob("*.txt"))
+    if not Path(config.VOCAB_PATH).exists():
+        train_bert_tokenizer(
+            vocab_size=config.VOCAB_SIZE,
+            vocab_path=config.VOCAB_PATH,
+            min_freq=config.MIN_FREQ,
+            corpus_files=corpus_files,
+            post_processor=True,
+        )

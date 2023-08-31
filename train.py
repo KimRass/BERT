@@ -9,7 +9,7 @@ import argparse
 from time import time
 
 import config
-from pretrain.wordpiece import train_bert_tokenizer, load_bert_tokenizer
+from pretrain.wordpiece import load_bert_tokenizer
 from pretrain.bookcorpus import BookCorpusForBERT
 from model import BERTBaseLM
 from pretrain.loss import PretrainingLoss
@@ -52,17 +52,7 @@ if __name__ == "__main__":
     print(f"""MAX_LEN = {config.MAX_LEN}""")
     print(f"""N_STEPS = {N_STEPS:,}""")
 
-    corpus_files = list(Path(config.EPUBTXT_DIR).glob("*.txt"))
-    if not Path(config.VOCAB_PATH).exists():
-        train_bert_tokenizer(
-            vocab_size=config.VOCAB_SIZE,
-            vocab_path=config.VOCAB_PATH,
-            min_freq=config.MIN_FREQ,
-            corpus_files=corpus_files,
-            post_processor=True,
-        )
     tokenizer = load_bert_tokenizer(config.VOCAB_PATH)
-
     ds = BookCorpusForBERT(
         epubtxt_dir=config.EPUBTXT_DIR, tokenizer=tokenizer, max_len=config.MAX_LEN
     )
