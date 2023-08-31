@@ -50,7 +50,7 @@ if __name__ == "__main__":
     N_STEPS = (256 * 512 * 1_000_000) // (BATCH_SIZE * config.MAX_LEN)
     print(f"""BATCH_SIZE = {BATCH_SIZE}""")
     print(f"""MAX_LEN = {config.MAX_LEN}""")
-    print(f"""N_STEPS = {N_STEPS}""")
+    print(f"""N_STEPS = {N_STEPS:,}""")
 
     corpus_files = list(Path(config.EPUBTXT_DIR).glob("*.txt"))
     if not Path(config.VOCAB_PATH).exists():

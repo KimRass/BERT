@@ -32,7 +32,7 @@ def train_bert_tokenizer(
     )
     corpus_files = list(map(str, corpus_files))
     tokenizer.train(files=corpus_files, trainer=trainer)
-    tokenizer.save(vocab_path)
+    tokenizer.save(str(vocab_path))
 
 
 def load_bert_tokenizer(vocab_path):
