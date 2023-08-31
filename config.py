@@ -5,9 +5,8 @@ from pathlib import Path
 VOCAB_SIZE = 30_522
 MAX_LEN = 512
 ### BookCorpus
-EPUBTXT_DIR = "/home/ubuntu/project/cv/bookcorpus/epubtxt"
+EPUBTXT_DIR = "/home/ubuntu/project/cv/bookcorpus_subset/epubtxt"
 VOCAB_PATH = Path(__file__).parent/"pretrain/bookcorpus_vocab.json"
-# VOCAB_PATH = "/Users/jongbeomkim/Desktop/workspace/bert_from_scratch/pretrain/bookcorpus_vocab.json"
 MIN_FREQ = 5
 
 ### Architecture
@@ -36,3 +35,7 @@ N_WORKERS = 4
 CKPT_DIR = Path(__file__).parent/"checkpoints"
 N_PRINT_STEPS = 100
 N_CKPT_STEPS = 500
+### Masked Language Model
+SELECT_PROB=0.15
+MASK_PROB=0.8
+RANDOMIZE_PROB=0.1

@@ -303,7 +303,7 @@ class NSPHead(nn.Module):
         return x
 
 
-class BERTBaseLM(nn.Module):
+class BERTBaseForPretraining(nn.Module):
     """
     BERT Language Model
     Next Sentence Prediction Model + Masked Language Model

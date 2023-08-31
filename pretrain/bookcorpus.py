@@ -23,24 +23,6 @@ import config
 from pretrain.wordpiece import train_bert_tokenizer, load_bert_tokenizer
 
 
-# def _get_parags(epubtxt_dir):
-#     parags = list()
-#     for doc_path in tqdm(list(Path(epubtxt_dir).glob("*.txt"))):
-#         for parag in open(doc_path, mode="r", encoding="utf-8"):
-#             parag = parag.strip()
-#             if parag == "":
-#                 continue
-#             # if "テ" in parag:
-#             #     print(doc_path)
-#             token_ids = tokenizer.encode(parag).ids
-#             parags.append(
-#                 {
-#                     "document": str(doc_path), "paragraph": parag, "token_ids": token_ids,
-#                 }
-#             )
-#     return parags
-
-
 class BookCorpusForBERT(Dataset):
     def __init__(
         self,
@@ -57,11 +39,10 @@ class BookCorpusForBERT(Dataset):
         self.pad_id = tokenizer.token_to_id("[PAD]")
         self.unk_id = tokenizer.token_to_id("[UNK]")
 
-        self.parags = self._get_parags()
-        self.data = self._get_data(self.parags)
+        self._parse_and_tokenize()
     
-    def _get_parags(self):
-        parags = list()
+    def _parse_and_tokenize(self):
+        self.ls_token_ids = list()
         for doc_path in tqdm(list(Path(self.epubtxt_dir).glob("*.txt"))):
             for parag in open(doc_path, mode="r", encoding="utf-8"):
                 parag = parag.strip()
@@ -69,51 +50,27 @@ class BookCorpusForBERT(Dataset):
                     continue
 
                 token_ids = self.tokenizer.encode(parag).ids
-                parags.append(
-                    {
-                        "document": str(doc_path), "paragraph": parag, "token_ids": token_ids,
-                    }
-                )
-        return parags
+                self.ls_token_ids.append(token_ids)
+        return self.ls_token_ids
 
-    def _to_bert_input(self, ls_token_ids):
+    def _to_bert_input(self, prev_token_ids, next_token_ids):
         token_ids = (
-            [self.cls_id] + ls_token_ids[0][: self.max_len - 3] + [self.sep_id] + ls_token_ids[1]
+            [self.cls_id] + prev_token_ids[: self.max_len - 3] + [self.sep_id] + next_token_ids
         )[: self.max_len - 1] + [self.sep_id]
         token_ids += [self.pad_id] * (self.max_len - len(token_ids))
         return token_ids
 
-    def _get_data(self, parags):
-        data = list()
+    def _sample_next_sentence(self, idx):
+        if random.random() < 0.5:
+            next_idx = idx + 1
+            is_next = 1
+        else:
+            next_idx = random.choice(len(self.ls_token_ids))
+            is_next = 0
+        next_token_ids = self.ls_token_ids[next_idx]
+        return next_token_ids, is_next
 
-        for idx1 in tqdm(range(len(parags) - 1)):
-            if random.random() < 0.5:
-                is_next = 1
-                idx2 = idx1 + 1
-            else:
-                is_next = 0
-                idx2 = random.randrange(len(parags))
-
-            parag1 = parags[idx1]["paragraph"]
-            parag2 = parags[idx2]["paragraph"]
-            segs = [parag1, parag2]
-
-            token_ids1 = parags[idx1]["token_ids"]
-            token_ids2 = parags[idx2]["token_ids"]
-            ls_token_ids = [token_ids1, token_ids2]
-
-            token_ids = self._to_bert_input(ls_token_ids)
-            data.append(
-                {
-                    "segments": segs,
-                    "lists_of_token_ids": ls_token_ids,
-                    "token_ids": token_ids,
-                    "is_next": is_next
-                }
-            )
-        return data
-
-    def _get_segment_ids_from_token_ids(self, token_ids):
+    def _token_ids_to_segment_ids(self, token_ids):
         seg_ids = torch.zeros_like(token_ids, dtype=token_ids.dtype, device=token_ids.device)
         is_sep = (token_ids == self.sep_id)
         if is_sep.sum() == 2:
@@ -125,9 +82,11 @@ class BookCorpusForBERT(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        token_ids = torch.as_tensor(self.data[idx]["token_ids"])
-        seg_ids = self._get_segment_ids_from_token_ids(token_ids)
-        return token_ids, seg_ids, torch.as_tensor(self.data[idx]["is_next"])
+        prev_token_ids = self.ls_token_ids[idx]
+        next_token_ids, is_next = self._sample_next_sentence(idx)
+        token_ids = self._to_bert_input(prev_token_ids=prev_token_ids, next_token_ids=next_token_ids)
+        seg_ids = self._token_ids_to_segment_ids(token_ids)
+        return torch.as_tensor(token_ids), torch.as_tensor(seg_ids), torch.as_tensor(is_next)
 
 
 if __name__ == "__main__":
