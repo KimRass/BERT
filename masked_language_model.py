@@ -50,7 +50,7 @@ class MaskedLanguageModel(object):
         # "(2) a random token 10% of the time
         # (3) the unchanged $i$-th token 10% of the time."
         random_token_ids = torch.randint(
-            high=self.vocab_size, size=torch.Size((randomize_mask.sum(),)),
+            high=self.vocab_size, size=torch.Size((randomize_mask.sum(),)), device=x.device,
         )
         x[randomize_mask.nonzero(as_tuple=True)] = random_token_ids
         # return x, copied
