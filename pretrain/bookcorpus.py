@@ -64,7 +64,7 @@ class BookCorpusForBERT(Dataset):
             next_idx = idx + 1
             is_next = 1
         else:
-            next_idx = random.choice(len(self.ls_token_ids))
+            next_idx = random.uniform(0, len(self.ls_token_ids) - 1)
             is_next = 0
         next_token_ids = self.ls_token_ids[next_idx]
         return next_token_ids, is_next
