@@ -6,33 +6,34 @@ from torch.cuda.amp import GradScaler
 from tqdm.auto import tqdm
 from pathlib import Path
 import argparse
+from time import time
 
 import config
 from pretrain.wordpiece import train_bert_tokenizer, load_bert_tokenizer
 from pretrain.bookcorpus import BookCorpusForBERT
 from model import BERTBaseLM
 from pretrain.loss import PretrainingLoss
+from utils import get_elapsed_time
 
 
 def get_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--batch_size", type=int, required=True, default=0)
+    parser.add_argument("--batch_size", type=int, required=False, default=0)
 
     args = parser.parse_args()
     return args
 
 
-def save_checkpoint(epoch, model, optim, scaler, avg_acc, ckpt_path):
+def save_checkpoint(step, model, optim, scaler, ckpt_path):
     Path(ckpt_path).parent.mkdir(parents=True, exist_ok=True)
 
     ckpt = {
-        "epoch": epoch,
+        "step": step,
         "optimizer": optim.state_dict(),
         "scaler": scaler.state_dict(),
-        "average_accuracy": avg_acc,
     }
-    if config.N_GPUS > 0 and config.MULTI_GPU:
+    if config.N_GPUS > 1:
         ckpt["model"] = model.module.state_dict()
     else:
         ckpt["model"] = model.state_dict()
@@ -93,7 +94,8 @@ if __name__ == "__main__":
     init_step = 0
     running_loss = 0
     step_cnt = 0
-    for step in range(init_step + 1, config.N_STEPS + 1):
+    start_time = time()
+    for step in range(init_step + 1, N_STEPS + 1):
         try:
             token_ids, seg_ids, is_next = next(di)
         except StopIteration:
@@ -123,8 +125,15 @@ if __name__ == "__main__":
 
         running_loss += loss.item()
         step_cnt += 1
-        if (step % config.N_PRINT_STEPS == 0) or (step == config.N_STEPS):
-            print(f"""[ {step:,}/{config.N_STEPS:,} ]""", end="")
-            print(f"""[ {running_loss / step_cnt} ]""")
+
+        if (step % config.N_PRINT_STEPS == 0) or (step == N_STEPS):
+            print(f"""[ {step:,}/{N_STEPS:,} ][ {get_elapsed_time(start_time)} ]""", end="")
+            print(f"""[ {running_loss / step_cnt:.3f} ]""")
 
             running_loss = 0
+
+        ckpt_path = config.CKPT_DIR/f"""step_{step}.pth"""
+        if (step % config.N_PRINT_STEPS == 0) or (step == N_STEPS):
+            save_checkpoint(
+                step=step, model=model, optim=optim, scaler=scaler, ckpt_path=ckpt_path
+            )

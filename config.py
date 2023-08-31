@@ -5,9 +5,7 @@ from pathlib import Path
 VOCAB_SIZE = 30_522
 MAX_LEN = 512
 ### BookCorpus
-# EPUBTXT_DIR = "/home/user/cv/bookcorpus/epubtxt"
-EPUBTXT_DIR = "/home/user/cv/bookcorpus_subset"
-# EPUBTXT_DIR = "/Users/jongbeomkim/Documents/datasets/bookcorpus_subset"
+EPUBTXT_DIR = "/home/ubuntu/project/cv/bookcorpus/epubtxt"
 VOCAB_PATH = Path(__file__).parent/"pretrain/bookcorpus_vocab.json"
 # VOCAB_PATH = "/Users/jongbeomkim/Desktop/workspace/bert_from_scratch/pretrain/bookcorpus_vocab.json"
 MIN_FREQ = 5
@@ -35,4 +33,6 @@ AUTOCAST = False
 BATCH_SIZE = 256
 # "We train with batch size of 256 sequences (256 sequences * 512 tokens = 128,000 tokens/batch) for 1,000,000 steps, which is approximately 40 epochs over the 3.3 billion word corpus. (Comment: 256 * 512 * 1,000,000 / 3,300,000,000 = 39.7)
 N_WORKERS = 4
+CKPT_DIR = Path(__file__).parent/"checkpoints"
 N_PRINT_STEPS = 100
+N_CKPT_STEPS = 500
