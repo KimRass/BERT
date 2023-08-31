@@ -51,7 +51,6 @@ class BookCorpusForBERT(Dataset):
 
                 token_ids = self.tokenizer.encode(parag).ids
                 self.ls_token_ids.append(token_ids)
-        return self.ls_token_ids
 
     def _to_bert_input(self, prev_token_ids, next_token_ids):
         token_ids = (
