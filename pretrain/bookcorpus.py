@@ -67,7 +67,7 @@ class BookCorpusForBERT(Dataset):
             next_idx = random.uniform(0, len(self.ls_token_ids) - 1)
             is_next = 0
         next_token_ids = self.ls_token_ids[next_idx]
-        return next_token_ids, is_next
+        return next_token_ids, torch.as_tensor(is_next)
 
     def _token_ids_to_segment_ids(self, token_ids):
         seg_ids = torch.zeros_like(token_ids, dtype=token_ids.dtype, device=token_ids.device)
@@ -83,9 +83,12 @@ class BookCorpusForBERT(Dataset):
     def __getitem__(self, idx):
         prev_token_ids = self.ls_token_ids[idx]
         next_token_ids, is_next = self._sample_next_sentence(idx)
-        token_ids = self._to_bert_input(prev_token_ids=prev_token_ids, next_token_ids=next_token_ids)
+        token_ids = self._to_bert_input(
+            prev_token_ids=prev_token_ids, next_token_ids=next_token_ids,
+        )
+        token_ids = torch.as_tensor(token_ids)
         seg_ids = self._token_ids_to_segment_ids(token_ids)
-        return torch.as_tensor(token_ids), torch.as_tensor(seg_ids), torch.as_tensor(is_next)
+        return token_ids, seg_ids, is_next
 
 
 if __name__ == "__main__":
