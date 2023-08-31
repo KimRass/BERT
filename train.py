@@ -11,7 +11,8 @@ from time import time
 import config
 from pretrain.wordpiece import load_bert_tokenizer
 from pretrain.bookcorpus import BookCorpusForBERT
-from model import BERTBaseLM
+from model import BERTBaseForPretraining
+from masked_language_model import MaskedLanguageModel
 from pretrain.loss import PretrainingLoss
 from utils import get_elapsed_time
 
@@ -66,9 +67,16 @@ if __name__ == "__main__":
     )
     di = iter(dl)
 
-    model = BERTBaseLM(vocab_size=config.VOCAB_SIZE).to(config.DEVICE)
+    model = BERTBaseForPretraining(vocab_size=config.VOCAB_SIZE).to(config.DEVICE)
     if config.N_GPUS > 1:
         model = nn.DataParallel(model)
+    mlm = MaskedLanguageModel(
+        vocab_size=config.VOCAB_SIZE,
+        mask_id=tokenizer.token_to_id("[MASK]"),
+        select_prob=config.SELECT_PROB,
+        mask_prob=config.MASK_PROB,
+        randomize_prob=config.RANDOMIZE_PROB,
+    )
 
     optim = Adam(
         model.parameters(),
@@ -94,6 +102,8 @@ if __name__ == "__main__":
         token_ids = token_ids.to(config.DEVICE)
         seg_ids = seg_ids.to(config.DEVICE)
         is_next = is_next.to(config.DEVICE)
+
+        token_ids = mlm(token_ids)
 
         with torch.autocast(
             device_type=config.DEVICE.type,

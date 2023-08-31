@@ -29,7 +29,7 @@ class MaskedLanguageModel(object):
 
 
     def __call__(self, x):
-        cloned = x.clone()
+        copied = x.clone()
 
         rand_tensor = torch.rand(x.shape, device=x.device)
         rand_tensor.masked_fill_(mask=torch.isin(x, torch.as_tensor(self.no_mask_token_ids)), value=1)
@@ -49,7 +49,8 @@ class MaskedLanguageModel(object):
         # (3) the unchanged $i$-th token 10% of the time."
         random_token_ids = torch.randint(high=self.vocab_size, size=torch.Size((randomize_mask.sum(),)))
         x[randomize_mask.nonzero(as_tuple=True)] = random_token_ids
-        return x, cloned
+        # return x, copied
+        return x
 
 
 # if __name__ == "__main__":
