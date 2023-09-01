@@ -25,6 +25,7 @@ def get_args():
         "--epubtxt_dir", type=str, required=False, default="../bookcurpus/epubtxt",
     )
     parser.add_argument("--batch_size", type=int, required=False, default=256)
+    parser.add_argument("--chunk_size", type=int, required=False, default=2 ** 12)
 
     args = parser.parse_args()
     return args
@@ -67,6 +68,7 @@ if __name__ == "__main__":
         epubtxt_dir=args.epubtxt_dir,
         tokenizer=tokenizer,
         max_len=config.MAX_LEN,
+        chunk_size=args.chunk_size,
     )
     dl = DataLoader(
         ds,
