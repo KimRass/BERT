@@ -39,17 +39,31 @@ class BookCorpusForBERT(Dataset):
             epubtxt_dir=epubtxt_dir, tokenizer=tokenizer,
         )
 
+    # def _parse_and_tokenize(self, epubtxt_dir, tokenizer):
+    #     parags = list()
+    #     for doc_path in tqdm(list(Path(epubtxt_dir).glob("*.txt"))):
+    #         for parag in open(doc_path, mode="r", encoding="utf-8"):
+    #             parag = parag.strip()
+    #             if parag == "":
+    #                 continue
+
+    #             parags.append(parag)
+    #     encoded = tokenizer.encode_batch(parags)
+    #     print("Completed")
+    #     self.ls_token_ids = [i.ids[1: -1] for i in encoded]
+
     def _parse_and_tokenize(self, epubtxt_dir, tokenizer):
-        parags = list()
+        print("Parsing and tokenizing BookCorpus...")
+        self.ls_token_ids = list()
         for doc_path in tqdm(list(Path(epubtxt_dir).glob("*.txt"))):
+            parags = list()
             for parag in open(doc_path, mode="r", encoding="utf-8"):
                 parag = parag.strip()
-                if parag == "":
-                    continue
-
-                parags.append(parag)
-        encoded = tokenizer.encode_batch(parags)
-        self.ls_token_ids = [i.ids[1: -1] for i in encoded]
+                if parag != "":
+                    parags.append(parag)
+            encoded = tokenizer.encode_batch(parags)
+            self.ls_token_ids = [i.ids[1: -1] for i in encoded]
+        print("Completed")
 
     def _to_bert_input(self, prev_token_ids, next_token_ids):
         token_ids = (

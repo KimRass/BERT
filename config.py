@@ -9,7 +9,8 @@ from pathlib import Path
 VOCAB_SIZE = 30_522
 MAX_LEN = 512
 ### BookCorpus
-EPUBTXT_DIR = "/home/ubuntu/project/cv/bookcorpus/epubtxt"
+# EPUBTXT_DIR = "/home/ubuntu/project/cv/bookcorpus/epubtxt"
+EPUBTXT_DIR = "/Users/jongbeomkim/Documents/datasets/bookcorpus/epubtxt"
 VOCAB_PATH = Path(__file__).parent/"pretrain/bookcorpus_vocab.json"
 MIN_FREQ = 5
 
