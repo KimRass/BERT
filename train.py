@@ -28,7 +28,6 @@ def get_args():
 
 def save_checkpoint(step, model, optim, scaler, ckpt_path):
     Path(ckpt_path).parent.mkdir(parents=True, exist_ok=True)
-
     ckpt = {
         "step": step,
         "optimizer": optim.state_dict(),
@@ -38,8 +37,8 @@ def save_checkpoint(step, model, optim, scaler, ckpt_path):
         ckpt["model"] = model.module.state_dict()
     else:
         ckpt["model"] = model.state_dict()
-
     torch.save(ckpt, str(ckpt_path))
+    print(f"""Saved checkpoint.""")
 
 
 if __name__ == "__main__":
@@ -98,8 +97,9 @@ if __name__ == "__main__":
     init_step = 0
     running_loss = 0
     step_cnt = 0
+    prev_ckpt_path = ".pth"
     start_time = time()
-    for step in range(init_step + 1, N_STEPS + 1):
+    for step in tqdm(range(init_step + 1, N_STEPS + 1)):
         try:
             token_ids, seg_ids, is_next = next(di)
         except StopIteration:
@@ -139,9 +139,11 @@ if __name__ == "__main__":
             running_loss = 0
             step_cnt = 0
 
-        if (step % config.N_CKPT_STEPS == 0) or (step == N_STEPS):
-            ckpt_path = config.CKPT_DIR/f"""bookcorpus_step_{step}.pth"""
-            if (step % config.N_PRINT_STEPS == 0) or (step == N_STEPS):
-                save_checkpoint(
-                    step=step, model=model, optim=optim, scaler=scaler, ckpt_path=ckpt_path,
-                )
+        # if (step % config.N_CKPT_STEPS == 0) or (step == N_STEPS):
+            cur_ckpt_path = config.CKPT_DIR/f"""bookcorpus_step_{step}.pth"""
+            save_checkpoint(
+                step=step, model=model, optim=optim, scaler=scaler, ckpt_path=cur_ckpt_path,
+            )
+            if prev_ckpt_path.exists():
+                prev_ckpt_path.unlink()
+            prev_ckpt_path = cur_ckpt_path
