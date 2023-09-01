@@ -100,17 +100,17 @@ if __name__ == "__main__":
 
     crit = PretrainingLoss()
 
-    init_step = 0
     running_loss = 0
     step_cnt = 0
     prev_ckpt_path = ".pth"
     start_time = time()
-    for step in tqdm(range(init_step + 1, N_STEPS + 1)):
+    for step in tqdm(range(1, N_STEPS + 1)):
         try:
             token_ids, seg_ids, is_next = next(di)
         except StopIteration:
             di = iter(dl)
             token_ids, seg_ids, is_next = next(di)
+
         token_ids = token_ids.to(config.DEVICE)
         seg_ids = seg_ids.to(config.DEVICE)
         is_next = is_next.to(config.DEVICE)

@@ -74,16 +74,6 @@ class BookCorpusForBERT(Dataset):
         next_token_ids = self.ls_token_ids[next_idx]
         return next_token_ids, torch.as_tensor(is_next)
 
-    # def _sample_next_sentence(self, idx):
-    #     if random.random() < 0.5:
-    #         next_idx = idx + 1
-    #         is_next = 1
-    #     else:
-    #         next_idx = random.randrange(len(self.parags))
-    #         is_next = 0
-    #     next_parag = self.parags[next_idx]
-    #     return next_parag, torch.as_tensor(is_next)
-
     def _token_ids_to_segment_ids(self, token_ids):
         seg_ids = torch.zeros_like(token_ids, dtype=token_ids.dtype, device=token_ids.device)
         is_sep = (token_ids == self.sep_id)
@@ -93,14 +83,9 @@ class BookCorpusForBERT(Dataset):
         return seg_ids
 
     def __len__(self):
-        # return len(self.parags)
-        return len(self.ls_token_ids)
+        return len(self.ls_token_ids) - 1
 
     def __getitem__(self, idx):
-        # parag = self.parags[idx]
-        # token_ids = self.tokenizer.encode(parag).ids[1: -1]
-        # next_parag, is_next = self._sample_next_sentence(idx)
-        # next_token_ids = self.tokenizer.encode(next_parag).ids[1: -1]
         token_ids = self.ls_token_ids[idx]
         next_token_ids, is_next = self._sample_next_sentence(idx)
 
@@ -119,12 +104,3 @@ if __name__ == "__main__":
     )
     token_ids, seg_ids, is_next = ds[10]
     token_ids
-
-    doc_path = "/Users/jongbeomkim/Documents/datasets/bookcorpus/epubtxt/1-2-this-is-only-the-beginning.epub.txt"
-    # for parag in open(doc_path, mode="r", encoding="utf-8"):
-    #     parag
-    with open(doc_path, mode="r", encoding="utf-8") as f:
-        parags = f.readlines()
-    [parag.strip() for parag in parags if parag.strip()]
-        # for parag in f:
-        #     parag
