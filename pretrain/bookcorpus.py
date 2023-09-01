@@ -124,6 +124,6 @@ if __name__ == "__main__":
     #     parag
     with open(doc_path, mode="r", encoding="utf-8") as f:
         parags = f.readlines()
-    [parag.strip() for parag in parags]
+    [parag.strip() for parag in parags if parag.strip()]
         # for parag in f:
         #     parag
