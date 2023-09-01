@@ -12,7 +12,6 @@ MAX_LEN = 512
 EPUBTXT_DIR = "/home/ubuntu/project/cv/bookcorpus/epubtxt"
 VOCAB_PATH = Path(__file__).parent/"pretrain/bookcorpus_vocab.json"
 MIN_FREQ = 5
-TOKEN_IDS_PATH = Path(__file__).parent/"pretrain/bookcorpus_token_ids.csv"
 
 ### Architecture
 DROP_PROB = 0.1 # "For the base model, we use a rate of $P_{drop} = 0.1$."
