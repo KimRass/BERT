@@ -7,16 +7,17 @@
 # "For Wikipedia we extract only the text passages and ignore lists, tables, and headers.
 # It is critical to use a document-level corpus rather than a shuffled sentence-level corpus
 # such as the Billion Word Benchmark."
-
+import os
 import torch
 from torch.utils.data import Dataset, DataLoader
 import random
 from pathlib import Path
 from tqdm.auto import tqdm
-import csv
 
 import config
 from pretrain.wordpiece import train_bert_tokenizer, load_bert_tokenizer
+
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 class BookCorpusForBERT(Dataset):
@@ -99,8 +100,7 @@ if __name__ == "__main__":
     epubtxt_dir = "/Users/jongbeomkim/Documents/datasets/bookcorpus/epubtxt"
     csv_path = "/Users/jongbeomkim/Desktop/workspace/bert_from_scratch/pretrain/bookcorpus_token_ids.csv"
     ds = BookCorpusForBERT(
-        # epubtxt_dir=config.EPUBTXT_DIR, tokenizer=tokenizer, max_len=config.MAX_LEN
-        epubtxt_dir=epubtxt_dir, csv_path=csv_path, tokenizer=tokenizer, max_len=config.MAX_LEN
+        epubtxt_dir=config.EPUBTXT_DIR, tokenizer=tokenizer, max_len=config.MAX_LEN
     )
     token_ids, seg_ids, is_next = ds[10]
     token_ids
