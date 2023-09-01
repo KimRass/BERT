@@ -100,6 +100,7 @@ if __name__ == "__main__":
 
     crit = PretrainingLoss()
 
+    print("Training...")
     running_loss = 0
     step_cnt = 0
     prev_ckpt_path = ".pth"
@@ -138,7 +139,7 @@ if __name__ == "__main__":
         running_loss += loss.item()
         step_cnt += 1
 
-        if ((step * args.batch_size) % config.N_CKPT_SAMPLES == 0) or (step == N_STEPS):
+        if (step % (config.N_CKPT_SAMPLES // args.batch_size) == 0) or (step == N_STEPS):
             print(f"""[ {step:,}/{N_STEPS:,} ][ {get_elapsed_time(start_time)} ]""", end="")
             print(f"""[ {running_loss / step_cnt:.3f} ]""")
 
