@@ -19,44 +19,10 @@ import config
 from pretrain.wordpiece import train_bert_tokenizer, load_bert_tokenizer
 
 
-def _parse_and_tokenize(epubtxt_dir, tokenizer):
-    ls_token_ids = list()
-    for doc_path in tqdm(list(Path(epubtxt_dir).glob("*.txt"))):
-        parags = list()
-        for parag in open(doc_path, mode="r", encoding="utf-8"):
-            parag = parag.strip()
-            if parag == "":
-                continue
-
-            parags.append(parag)
-        encoded = tokenizer.encode_batch(parags)
-        ls_token_ids.extend([i.ids[1: -1] for i in encoded])
-    return ls_token_ids
-
-
-def save_token_ids(epubtxt_dir, tokenizer, csv_path):
-    print("Tokenizing BookCorpus paragraphs...")
-    ls_token_ids = _parse_and_tokenize(epubtxt_dir=epubtxt_dir, tokenizer=tokenizer)
-    if not Path(csv_path).exists():
-        with open(csv_path, mode="w") as f:
-            writer = csv.writer(f)
-            writer.writerows(ls_token_ids)
-
-
-def load_token_ids(csv_path):
-    ls_token_ids = list()
-    with open(csv_path, mode="r") as f:
-        reader = csv.reader(f)
-        for row in reader:
-            ls_token_ids.append(list(map(int, row)))
-    return ls_token_ids
-
-
 class BookCorpusForBERT(Dataset):
     def __init__(
         self,
         epubtxt_dir,
-        csv_path,
         tokenizer,
         max_len,
     ):
@@ -69,9 +35,21 @@ class BookCorpusForBERT(Dataset):
         self.pad_id = tokenizer.token_to_id("[PAD]")
         self.unk_id = tokenizer.token_to_id("[UNK]")
 
-        if not Path(csv_path).exists():
-            save_token_ids(epubtxt_dir=epubtxt_dir, tokenizer=tokenizer, csv_path=csv_path)
-        self.ls_token_ids = load_token_ids(csv_path)
+        self._parse_and_tokenize(
+            epubtxt_dir=epubtxt_dir, tokenizer=tokenizer,
+        )
+
+    def _parse_and_tokenize(self, epubtxt_dir, tokenizer):
+        parags = list()
+        for doc_path in tqdm(list(Path(epubtxt_dir).glob("*.txt"))):
+            for parag in open(doc_path, mode="r", encoding="utf-8"):
+                parag = parag.strip()
+                if parag == "":
+                    continue
+
+                parags.append(parag)
+        encoded = tokenizer.encode_batch(parags)
+        self.ls_token_ids = [i.ids[1: -1] for i in encoded]
 
     def _to_bert_input(self, prev_token_ids, next_token_ids):
         token_ids = (
