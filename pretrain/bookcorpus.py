@@ -22,17 +22,20 @@ from pretrain.wordpiece import train_bert_tokenizer, load_bert_tokenizer
 def _parse_and_tokenize(epubtxt_dir, tokenizer):
     ls_token_ids = list()
     for doc_path in tqdm(list(Path(epubtxt_dir).glob("*.txt"))):
+        parags = list()
         for parag in open(doc_path, mode="r", encoding="utf-8"):
             parag = parag.strip()
             if parag == "":
                 continue
 
-            token_ids = tokenizer.encode(parag).ids
-            ls_token_ids.append(token_ids[1: -1])
+            parags.append(parag)
+        encoded = tokenizer.encode_batch(parags)
+        ls_token_ids.extend([i.ids[1: -1] for i in encoded])
     return ls_token_ids
 
 
 def save_token_ids(epubtxt_dir, tokenizer, csv_path):
+    print("Tokenizing BookCorpus paragraphs...")
     ls_token_ids = _parse_and_tokenize(epubtxt_dir=epubtxt_dir, tokenizer=tokenizer)
     if not Path(csv_path).exists():
         with open(csv_path, mode="w") as f:
@@ -110,6 +113,7 @@ class BookCorpusForBERT(Dataset):
 
 
 if __name__ == "__main__":
+    epubtxt_dir = "/Users/jongbeomkim/Documents/datasets/bookcorpus/epubtxt"
     csv_path = "/Users/jongbeomkim/Desktop/workspace/bert_from_scratch/pretrain/bookcorpus_token_ids.csv"
     ds = BookCorpusForBERT(
         # epubtxt_dir=config.EPUBTXT_DIR, tokenizer=tokenizer, max_len=config.MAX_LEN
