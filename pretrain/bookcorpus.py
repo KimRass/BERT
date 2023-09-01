@@ -51,7 +51,7 @@ class BookCorpusForBERT(Dataset):
     def _tokenize(self):
         print("Tokenizing BookCorpus...")
         self.ls_token_ids = list()
-        for idx in tqdm(range(0, len(self.parags), 100)):
+        for idx in tqdm(range(0, len(self.parags), 1000)):
             encoded = self.tokenizer.encode_batch(self.parags[idx: idx + 100])
             self.ls_token_ids.extend([i.ids[1: -1] for i in encoded])
         print("Completed")
