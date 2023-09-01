@@ -34,8 +34,8 @@ else:
 AUTOCAST = False
 N_WORKERS = 4
 CKPT_DIR = Path(__file__).parent/"checkpoints"
+N_CKPT_SAMPLES = 60_000
 ### Masked Language Model
-N_CKPT_SAMPLES = 20_000
 SELECT_PROB=0.15
 MASK_PROB=0.8
 RANDOMIZE_PROB=0.1
