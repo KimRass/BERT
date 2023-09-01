@@ -20,6 +20,9 @@ from utils import get_elapsed_time
 def get_args():
     parser = argparse.ArgumentParser()
 
+    parser.add_argument(
+        "--epubtxt_dir", type=str, required=False, default="../bookcurpus/epubtxt",
+    )
     parser.add_argument("--batch_size", type=int, required=False, default=256)
 
     args = parser.parse_args()
@@ -58,7 +61,7 @@ if __name__ == "__main__":
 
     tokenizer = load_bert_tokenizer(config.VOCAB_PATH)
     ds = BookCorpusForBERT(
-        epubtxt_dir=config.EPUBTXT_DIR,
+        epubtxt_dir=args.epubtxt_dir,
         tokenizer=tokenizer,
         max_len=config.MAX_LEN,
     )
