@@ -26,7 +26,7 @@ class BookCorpusForBERT(Dataset):
         epubtxt_dir,
         tokenizer,
         max_len,
-        chunk_size=2 ** 10,
+        chunk_size=2 ** 12,
     ):
         self.epubtxt_dir = epubtxt_dir
         self.tokenizer = tokenizer
