@@ -62,7 +62,7 @@ class BookCorpusForBERT(Dataset):
             [self.cls_id] + token_ids[: self.max_len - 3] + [self.sep_id] + next_token_ids
         )[: self.max_len - 1] + [self.sep_id]
         token_ids += [self.pad_id] * (self.max_len - len(token_ids))
-        return token_ids
+        return torch.as_tensor(token_ids)
 
     def _sample_next_sentence(self, idx):
         if random.random() < 0.5:
@@ -107,7 +107,6 @@ class BookCorpusForBERT(Dataset):
         token_ids = self._to_bert_input(
             token_ids=token_ids, next_token_ids=next_token_ids,
         )
-        token_ids = torch.as_tensor(token_ids)
         seg_ids = self._token_ids_to_segment_ids(token_ids)
         return token_ids, seg_ids, is_next
 

@@ -109,7 +109,7 @@ if __name__ == "__main__":
         try:
             token_ids, seg_ids, is_next = next(di)
         except StopIteration:
-            train_di = iter(dl)
+            di = iter(dl)
             token_ids, seg_ids, is_next = next(di)
         token_ids = token_ids.to(config.DEVICE)
         seg_ids = seg_ids.to(config.DEVICE)
