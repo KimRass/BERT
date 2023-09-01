@@ -7,7 +7,7 @@ from pathlib import Path
 
 ### Data
 VOCAB_SIZE = 30_522
-MAX_LEN = 512
+MAX_LEN = 256
 ### BookCorpus
 VOCAB_PATH = Path(__file__).parent/"pretrain/bookcorpus_vocab.json"
 MIN_FREQ = 5

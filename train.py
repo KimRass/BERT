@@ -111,6 +111,7 @@ if __name__ == "__main__":
         scaler.load_state_dict(ckpt["scaler"])
         init_step = ckpt["step"]
         prev_ckpt_path = config.CKPT_PATH
+        print(f"""Resuming from checkpoint '{config.CKPT_PATH}'...""")
     else:
         init_step = 0
         prev_ckpt_path = ".pth"
