@@ -26,12 +26,10 @@ class BookCorpusForBERT(Dataset):
         epubtxt_dir,
         tokenizer,
         max_len,
-        chunk_size=2 ** 12,
     ):
         self.epubtxt_dir = epubtxt_dir
         self.tokenizer = tokenizer
         self.max_len = max_len
-        self.chunk_size = chunk_size
 
         self.cls_id = tokenizer.token_to_id("[CLS]")
         self.sep_id = tokenizer.token_to_id("[SEP]")
