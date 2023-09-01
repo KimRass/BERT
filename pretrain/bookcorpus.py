@@ -93,7 +93,8 @@ class BookCorpusForBERT(Dataset):
         return seg_ids
 
     def __len__(self):
-        return len(self.parags)
+        # return len(self.parags)
+        return len(self.ls_token_ids)
 
     def __getitem__(self, idx):
         # parag = self.parags[idx]
