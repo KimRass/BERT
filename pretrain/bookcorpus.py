@@ -66,7 +66,7 @@ class BookCorpusForBERT(Dataset):
         self.pad_id = tokenizer.token_to_id("[PAD]")
         self.unk_id = tokenizer.token_to_id("[UNK]")
 
-        if not Path(epubtxt_dir).exists():
+        if not Path(csv_path).exists():
             save_token_ids(epubtxt_dir=epubtxt_dir, tokenizer=tokenizer, csv_path=csv_path)
         self.ls_token_ids = load_token_ids(csv_path)
 
