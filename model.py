@@ -7,6 +7,9 @@ import torch.nn.functional as F
 from einops import rearrange
 from typing import Literal
 
+import config
+from utils import print_number_of_parameters
+
 
 class PositionalEncoding(nn.Module):
     def __init__(self, dim: int, max_len: int=5000) -> None:
@@ -252,6 +255,7 @@ class BERTLarge(BERT):
             n_layers=24,
             n_heads=16,
             hidden_size=1024,
+            mlp_size = 1024 * 4,
             pad_id=pad_id
         )
 
@@ -303,16 +307,31 @@ class NSPHead(nn.Module):
         return x
 
 
+class BERTForPretraining(nn.Module):
+    def __init__(self, vocab_size, n_layers, n_heads, hidden_size, mlp_size, pad_id=0):
+        super().__init__()
+
+        self.bert = BERT(
+            vocab_size=vocab_size,
+            n_layers=n_layers,
+            n_heads=n_heads,
+            hidden_size=hidden_size,
+            mlp_size=mlp_size,
+            pad_id=pad_id,
+        )
+
+        self.nsp_head = NSPHead(self.bert.hidden_size)
+        self.mlm_head = MLMHead(
+            vocab_size=self.bert.vocab_size, hidden_size=self.bert.hidden_size,
+        )
+
+    def forward(self, seq, seg_ids):
+        x = self.bert(seq=seq, seg_ids=seg_ids)
+        return self.nsp_head(x), self.mlm_head(x)
+
+
 class BERTBaseForPretraining(nn.Module):
-    """
-    BERT Language Model
-    Next Sentence Prediction Model + Masked Language Model
-    """
     def __init__(self, vocab_size):
-        """
-        :param bert: BERT model which should be trained
-        :param vocab_size: total vocab size for masked_lm
-        """
         super().__init__()
 
         self.bert = BERTBase(vocab_size=vocab_size)
@@ -363,16 +382,13 @@ class MultipleChoiceHead(nn.Module):
 
 
 if __name__ == "__main__":
-    HIDDEN_DIM = 768
-    VOCAB_SIZE = 30_522
-
-    BATCH_SIZE = 8
-    SEQ_LEN = 512
-    seq = torch.randint(low=0, high=VOCAB_SIZE, size=(BATCH_SIZE, SEQ_LEN))
-    sent1_len = torch.randint(low=2, high=SEQ_LEN + 1, size=(BATCH_SIZE,))
-    seg_ids = torch.as_tensor([[0] * i + [1] * (SEQ_LEN - i) for i in sent1_len], dtype=torch.int64)
-
-    model = BERTBase(vocab_size=VOCAB_SIZE)
-    # model = BERTLarge(vocab_size=VOCAB_SIZE)
-    output = model(seq=seq, seg_ids=seg_ids)
-    print(output.shape)
+    model = BERT( # Smaller than BERT-Base
+        vocab_size=config.VOCAB_SIZE,
+        n_layers=6,
+        n_heads=6,
+        hidden_size=384,
+        mlp_size=384 * 4,
+    )
+    # model = BERTBase(vocab_size=config.VOCAB_SIZE)
+    # model = BERTLarge(vocab_size=config.VOCAB_SIZE)
+    print_number_of_parameters(model)

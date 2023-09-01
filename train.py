@@ -12,7 +12,7 @@ from time import time
 import config
 from pretrain.wordpiece import load_bert_tokenizer
 from pretrain.bookcorpus import BookCorpusForBERT
-from model import BERTBaseForPretraining
+from model import BERTForPretraining
 from masked_language_model import MaskedLanguageModel
 from pretrain.loss import PretrainingLoss
 from utils import get_elapsed_time
@@ -77,7 +77,13 @@ if __name__ == "__main__":
     )
     di = iter(dl)
 
-    model = BERTBaseForPretraining(vocab_size=config.VOCAB_SIZE).to(config.DEVICE)
+    model = BERTForPretraining( # Smaller than BERT-Base
+        vocab_size=config.VOCAB_SIZE,
+        n_layers=6,
+        n_heads=6,
+        hidden_size=384,
+        mlp_size=384 * 4,
+    ).to(config.DEVICE)
     if config.N_GPUS > 1:
         model = nn.DataParallel(model)
     mlm = MaskedLanguageModel(
@@ -116,10 +122,10 @@ if __name__ == "__main__":
         prev_ckpt_path = ".pth"
 
     print("Training...")
+    start_time = time()
     running_nsp_loss = 0
     running_mlm_loss = 0
     step_cnt = 0
-    start_time = time()
     for step in range(init_step + 1, N_STEPS + 1):
         try:
             token_ids, seg_ids, is_next = next(di)
@@ -162,6 +168,7 @@ if __name__ == "__main__":
             print(f"""[ NSP loss: {running_nsp_loss / step_cnt:.3f} ]""", end="")
             print(f"""[ MLM loss: {running_mlm_loss / step_cnt:.3f} ]""")
 
+            start_time = time()
             running_nsp_loss = 0
             running_mlm_loss = 0
             step_cnt = 0

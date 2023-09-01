@@ -7,7 +7,7 @@ from pathlib import Path
 
 ### Data
 VOCAB_SIZE = 30_522
-MAX_LEN = 256
+MAX_LEN = 512
 ### BookCorpus
 VOCAB_PATH = Path(__file__).parent/"pretrain/bookcorpus_vocab.json"
 MIN_FREQ = 5
@@ -41,4 +41,4 @@ MASK_PROB=0.8
 RANDOMIZE_PROB=0.1
 
 ### Resume
-CKPT_PATH = CKPT_DIR/"bookcorpus_step_25000.pth"
+CKPT_PATH = None
