@@ -3,6 +3,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.optim import Adam
 from torch.cuda.amp import GradScaler
+import gc
 from tqdm.auto import tqdm
 from pathlib import Path
 import argparse
@@ -46,6 +47,9 @@ def save_checkpoint(step, model, optim, scaler, ckpt_path):
 
 if __name__ == "__main__":
     # torch.autograd.set_detect_anomaly(True)
+
+    gc.collect()
+    torch.cuda.empty_cache()
 
     args = get_args()
 
