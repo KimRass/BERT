@@ -53,13 +53,12 @@ if __name__ == "__main__":
 
     args = get_args()
 
-    BATCH_SIZE = args.batch_size if args.batch_size != 0 else config.BATCH_SIZE
     # "We train with batch size of 256 sequences (256 sequences * 512 tokens
     # = 128,000 tokens/batch) for 1,000,000 steps, which is approximately 40 epochs
     # over the 3.3 billion word corpus." (Comment: 256 * 512 * 1,000,000 / 3,300,000,000
     # = 39.7)
-    N_STEPS = (256 * 512 * 1_000_000) // (BATCH_SIZE * config.MAX_LEN)
-    print(f"""BATCH_SIZE = {BATCH_SIZE}""")
+    N_STEPS = (256 * 512 * 1_000_000) // (args.batch_size * config.MAX_LEN)
+    print(f"""args.batch_size = {args.batch_size}""")
     print(f"""MAX_LEN = {config.MAX_LEN}""")
     print(f"""N_STEPS = {N_STEPS:,}""")
 
@@ -71,7 +70,7 @@ if __name__ == "__main__":
     )
     dl = DataLoader(
         ds,
-        batch_size=BATCH_SIZE,
+        batch_size=args.batch_size,
         shuffle=True,
         num_workers=config.N_WORKERS,
         pin_memory=True,
@@ -139,18 +138,17 @@ if __name__ == "__main__":
         running_loss += loss.item()
         step_cnt += 1
 
-        if (step % config.N_PRINT_STEPS == 0) or (step == N_STEPS):
+        if ((step * args.batch_size) % config.N_CKPT_SAMPLES == 0) or (step == N_STEPS):
             print(f"""[ {step:,}/{N_STEPS:,} ][ {get_elapsed_time(start_time)} ]""", end="")
             print(f"""[ {running_loss / step_cnt:.3f} ]""")
 
             running_loss = 0
             step_cnt = 0
 
-        # if (step % config.N_CKPT_STEPS == 0) or (step == N_STEPS):
             cur_ckpt_path = config.CKPT_DIR/f"""bookcorpus_step_{step}.pth"""
             save_checkpoint(
                 step=step, model=model, optim=optim, scaler=scaler, ckpt_path=cur_ckpt_path,
             )
-            if prev_ckpt_path.exists():
+            if Path(prev_ckpt_path).exists():
                 prev_ckpt_path.unlink()
             prev_ckpt_path = cur_ckpt_path
