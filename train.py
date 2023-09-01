@@ -42,7 +42,6 @@ def save_checkpoint(step, model, optim, scaler, ckpt_path):
     else:
         ckpt["model"] = model.state_dict()
     torch.save(ckpt, str(ckpt_path))
-    print(f"""Saved checkpoint.""")
 
 
 if __name__ == "__main__":
@@ -111,7 +110,7 @@ if __name__ == "__main__":
         scaler.load_state_dict(ckpt["scaler"])
         init_step = ckpt["step"]
         prev_ckpt_path = config.CKPT_PATH
-        print(f"""Resuming from checkpoint '{config.CKPT_PATH}'...""")
+        print(f"""Resuming from checkpoint\n    '{config.CKPT_PATH}'...""")
     else:
         init_step = 0
         prev_ckpt_path = ".pth"
@@ -163,7 +162,8 @@ if __name__ == "__main__":
             print(f"""[ NSP loss: {running_nsp_loss / step_cnt:.3f} ]""", end="")
             print(f"""[ MLM loss: {running_mlm_loss / step_cnt:.3f} ]""")
 
-            running_loss = 0
+            running_nsp_loss = 0
+            running_mlm_loss = 0
             step_cnt = 0
 
             cur_ckpt_path = config.CKPT_DIR/f"""bookcorpus_step_{step}.pth"""
