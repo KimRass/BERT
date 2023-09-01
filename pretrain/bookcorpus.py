@@ -94,7 +94,7 @@ class BookCorpusForBERT(Dataset):
         return seg_ids
 
     def __len__(self):
-        return len(self.ls_token_ids)
+        return len(self.parags)
 
     def __getitem__(self, idx):
         parag = self.parags[idx]
@@ -118,3 +118,12 @@ if __name__ == "__main__":
     )
     token_ids, seg_ids, is_next = ds[10]
     token_ids
+
+    doc_path = "/Users/jongbeomkim/Documents/datasets/bookcorpus/epubtxt/1-2-this-is-only-the-beginning.epub.txt"
+    # for parag in open(doc_path, mode="r", encoding="utf-8"):
+    #     parag
+    with open(doc_path, mode="r", encoding="utf-8") as f:
+        parags = f.readlines()
+    [parag.strip() for parag in parags]
+        # for parag in f:
+        #     parag
