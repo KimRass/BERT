@@ -58,9 +58,9 @@ if __name__ == "__main__":
     # over the 3.3 billion word corpus." (Comment: 256 * 512 * 1,000,000 / 3,300,000,000
     # = 39.7)
     N_STEPS = (256 * 512 * 1_000_000) // (args.batch_size * config.MAX_LEN)
-    print(f"""args.batch_size = {args.batch_size}""")
+    print(f"""BATCH_SIZE = {args.batch_size}""")
     print(f"""MAX_LEN = {config.MAX_LEN}""")
-    print(f"""N_STEPS = {N_STEPS:,}""")
+    print(f"""N_STEPS = {N_STEPS:,}""", end="\n\n")
 
     tokenizer = load_bert_tokenizer(config.VOCAB_PATH)
     ds = BookCorpusForBERT(
