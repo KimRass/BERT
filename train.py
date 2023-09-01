@@ -101,7 +101,8 @@ if __name__ == "__main__":
     crit = PretrainingLoss()
 
     print("Training...")
-    running_loss = 0
+    running_nsp_loss = 0
+    running_mlm_loss = 0
     step_cnt = 0
     prev_ckpt_path = ".pth"
     start_time = time()
@@ -124,9 +125,11 @@ if __name__ == "__main__":
             enabled=True if config.AUTOCAST else False,
         ):
             nsp_pred, mlm_pred = model(seq=token_ids, seg_ids=seg_ids)
-            loss = crit(
+            # loss = crit(
+            nsp_loss, mlm_loss = crit(
                 mlm_pred=mlm_pred, nsp_pred=nsp_pred, token_ids=token_ids, is_next=is_next,
             )
+            loss = nsp_loss + mlm_loss
         optim.zero_grad()
         if config.AUTOCAST:
             scaler.scale(loss).backward()
@@ -136,12 +139,14 @@ if __name__ == "__main__":
             loss.backward()
             optim.step()
 
-        running_loss += loss.item()
+        running_nsp_loss += nsp_loss.item()
+        running_mlm_loss += mlm_loss.item()
         step_cnt += 1
 
         if (step % (config.N_CKPT_SAMPLES // args.batch_size) == 0) or (step == N_STEPS):
             print(f"""[ {step:,}/{N_STEPS:,} ][ {get_elapsed_time(start_time)} ]""", end="")
-            print(f"""[ {running_loss / step_cnt:.3f} ]""")
+            print(f"""[ {running_nsp_loss / step_cnt:.3f} ]""", end="")
+            print(f"""[ {running_mlm_loss / step_cnt:.3f} ]""")
 
             running_loss = 0
             step_cnt = 0
