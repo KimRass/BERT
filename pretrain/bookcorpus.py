@@ -1,6 +1,5 @@
 # References
     # https://github.com/codertimo/BERT-pytorch/blob/master/bert_pytorch/dataset/dataset.py
-    # https://nn.labml.ai/transformers/mlm/index.html
     # https://d2l.ai/chapter_natural-language-processing-pretraining/bert-dataset.html
 
 # "For the pre-training corpus we use the BookCorpus (800M words) (Zhu et al., 2015)
@@ -9,24 +8,52 @@
 # It is critical to use a document-level corpus rather than a shuffled sentence-level corpus
 # such as the Billion Word Benchmark."
 
-import sys
-
-sys.path.insert(0, "/Users/jongbeomkim/Desktop/workspace/bert_from_scratch")
-
 import torch
 from torch.utils.data import Dataset, DataLoader
 import random
 from pathlib import Path
 from tqdm.auto import tqdm
+import csv
 
 import config
 from pretrain.wordpiece import train_bert_tokenizer, load_bert_tokenizer
+
+
+def _parse_and_tokenize(epubtxt_dir, tokenizer):
+    ls_token_ids = list()
+    for doc_path in tqdm(list(Path(epubtxt_dir).glob("*.txt"))):
+        for parag in open(doc_path, mode="r", encoding="utf-8"):
+            parag = parag.strip()
+            if parag == "":
+                continue
+
+            token_ids = tokenizer.encode(parag).ids
+            ls_token_ids.append(token_ids[1: -1])
+    return ls_token_ids
+
+
+def save_token_ids(epubtxt_dir, tokenizer, csv_path):
+    ls_token_ids = _parse_and_tokenize(epubtxt_dir=epubtxt_dir, tokenizer=tokenizer)
+    if not Path(csv_path).exists():
+        with open(csv_path, mode="w") as f:
+            writer = csv.writer(f)
+            writer.writerows(ls_token_ids)
+
+
+def load_token_ids(csv_path):
+    ls_token_ids = list()
+    with open(csv_path, mode="r") as f:
+        reader = csv.reader(f)
+        for row in reader:
+            ls_token_ids.append(list(map(int, row)))
+    return ls_token_ids
 
 
 class BookCorpusForBERT(Dataset):
     def __init__(
         self,
         epubtxt_dir,
+        csv_path,
         tokenizer,
         max_len,
     ):
@@ -39,18 +66,9 @@ class BookCorpusForBERT(Dataset):
         self.pad_id = tokenizer.token_to_id("[PAD]")
         self.unk_id = tokenizer.token_to_id("[UNK]")
 
-        self._parse_and_tokenize()
-    
-    def _parse_and_tokenize(self):
-        self.ls_token_ids = list()
-        for doc_path in tqdm(list(Path(self.epubtxt_dir).glob("*.txt"))):
-            for parag in open(doc_path, mode="r", encoding="utf-8"):
-                parag = parag.strip()
-                if parag == "":
-                    continue
-
-                token_ids = self.tokenizer.encode(parag).ids
-                self.ls_token_ids.append(token_ids)
+        if not Path(epubtxt_dir).exists():
+            save_token_ids(epubtxt_dir=epubtxt_dir, tokenizer=tokenizer, csv_path=csv_path)
+        self.ls_token_ids = load_token_ids(csv_path)
 
     def _to_bert_input(self, prev_token_ids, next_token_ids):
         token_ids = (
@@ -92,18 +110,10 @@ class BookCorpusForBERT(Dataset):
 
 
 if __name__ == "__main__":
-    corpus_files = list(Path(config.EPUBTXT_DIR).glob("*.txt"))
-    if not Path(config.VOCAB_PATH).exists():
-        train_bert_tokenizer(
-            vocab_size=config.VOCAB_SIZE,
-            vocab_path=config.VOCAB_PATH,
-            min_freq=config.MIN_FREQ,
-            corpus_files=corpus_files,
-            post_processor=True,
-        )
-    tokenizer = load_bert_tokenizer(config.VOCAB_PATH)
-
+    csv_path = "/Users/jongbeomkim/Desktop/workspace/bert_from_scratch/pretrain/bookcorpus_token_ids.csv"
     ds = BookCorpusForBERT(
-        epubtxt_dir=config.EPUBTXT_DIR, tokenizer=tokenizer, max_len=config.MAX_LEN
+        # epubtxt_dir=config.EPUBTXT_DIR, tokenizer=tokenizer, max_len=config.MAX_LEN
+        epubtxt_dir=epubtxt_dir, csv_path=csv_path, tokenizer=tokenizer, max_len=config.MAX_LEN
     )
     token_ids, seg_ids, is_next = ds[10]
+    token_ids

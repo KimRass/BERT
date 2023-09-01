@@ -4,8 +4,6 @@
 import sys
 import torch
 
-torch.set_printoptions(precision=2, edgeitems=12, linewidth=sys.maxsize, sci_mode=True)
-
 
 class MaskedLanguageModel(object):
     def __init__(
