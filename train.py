@@ -100,13 +100,27 @@ if __name__ == "__main__":
 
     crit = PretrainingLoss()
 
+    ### Resume
+    if config.CKPT_PATH is not None:
+        ckpt = torch.load(config.CKPT_PATH, map_location=config.DEVICE)
+        if config.N_GPUS > 1:
+            model.module.load_state_dict(ckpt["model"])
+        else:
+            model.load_state_dict(ckpt["model"])
+        optim.load_state_dict(ckpt["optimizer"])
+        scaler.load_state_dict(ckpt["scaler"])
+        init_step = ckpt["step"]
+        prev_ckpt_path = config.CKPT_PATH
+    else:
+        init_step = 0
+        prev_ckpt_path = ".pth"
+
     print("Training...")
     running_nsp_loss = 0
     running_mlm_loss = 0
     step_cnt = 0
-    prev_ckpt_path = ".pth"
     start_time = time()
-    for step in tqdm(range(1, N_STEPS + 1)):
+    for step in range(init_step + 1, N_STEPS + 1):
         try:
             token_ids, seg_ids, is_next = next(di)
         except StopIteration:
@@ -145,8 +159,8 @@ if __name__ == "__main__":
 
         if (step % (config.N_CKPT_SAMPLES // args.batch_size) == 0) or (step == N_STEPS):
             print(f"""[ {step:,}/{N_STEPS:,} ][ {get_elapsed_time(start_time)} ]""", end="")
-            print(f"""[ {running_nsp_loss / step_cnt:.3f} ]""", end="")
-            print(f"""[ {running_mlm_loss / step_cnt:.3f} ]""")
+            print(f"""[ NSP loss: {running_nsp_loss / step_cnt:.3f} ]""", end="")
+            print(f"""[ MLM loss: {running_mlm_loss / step_cnt:.3f} ]""")
 
             running_loss = 0
             step_cnt = 0

@@ -19,12 +19,6 @@ from torch.utils.data import Dataset, DataLoader
 import pandas as pd
 from tqdm.auto import tqdm
 
-from bert.tokenize import prepare_bert_tokenizer
-from bert.model import BERTBase, MultipleChoiceHead
-
-pd.options.display.width = sys.maxsize
-pd.options.display.max_columns = 10
-
 # "We construct four input sequences, each containing the concatenation of the given sentence (sentence A)
 # and a possible continuation (sentence B). The only task-specific parameters introduced is a vector
 # whose dot product with the [CLS] token representation $C$ denotes a score for each choice
