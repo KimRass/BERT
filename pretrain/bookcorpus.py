@@ -37,7 +37,7 @@ class BookCorpusForBERT(Dataset):
         self.unk_id = tokenizer.token_to_id("[UNK]")
 
         self._parse()
-        self._tokenize()
+        # self._tokenize()
 
     def _parse(self):
         print("Parsing BookCorpus...")
