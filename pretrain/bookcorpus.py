@@ -26,10 +26,12 @@ class BookCorpusForBERT(Dataset):
         epubtxt_dir,
         tokenizer,
         max_len,
+        chunk_size=2 ** 10,
     ):
         self.epubtxt_dir = epubtxt_dir
         self.tokenizer = tokenizer
         self.max_len = max_len
+        self.chunk_size = chunk_size
 
         self.cls_id = tokenizer.token_to_id("[CLS]")
         self.sep_id = tokenizer.token_to_id("[SEP]")
@@ -52,8 +54,8 @@ class BookCorpusForBERT(Dataset):
     def _tokenize(self):
         print("Tokenizing BookCorpus...")
         self.ls_token_ids = list()
-        for idx in tqdm(range(0, len(self.parags), 1000)):
-            encoded = self.tokenizer.encode_batch(self.parags[idx: idx + 100])
+        for idx in tqdm(range(0, len(self.parags), self.chunk_size)):
+            encoded = self.tokenizer.encode_batch(self.parags[idx: idx + self.chunk_size])
             self.ls_token_ids.extend([i.ids[1: -1] for i in encoded])
         print("Completed")
 
