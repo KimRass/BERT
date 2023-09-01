@@ -1,3 +1,7 @@
+# import sys
+
+# sys.path.insert(0, "/Users/jongbeomkim/Desktop/workspace/bert_from_scratch")
+
 import torch
 from pathlib import Path
 
@@ -8,6 +12,7 @@ MAX_LEN = 512
 EPUBTXT_DIR = "/home/ubuntu/project/cv/bookcorpus/epubtxt"
 VOCAB_PATH = Path(__file__).parent/"pretrain/bookcorpus_vocab.json"
 MIN_FREQ = 5
+TOKEN_IDS_PATH = Path(__file__).parent/"pretrain/bookcorpus_token_ids.csv"
 
 ### Architecture
 DROP_PROB = 0.1 # "For the base model, we use a rate of $P_{drop} = 0.1$."
@@ -29,12 +34,10 @@ else:
     DEVICE = torch.device("cpu")
     print(f"""Using CPU(s).""")
 AUTOCAST = False
-BATCH_SIZE = 256
-# "We train with batch size of 256 sequences (256 sequences * 512 tokens = 128,000 tokens/batch) for 1,000,000 steps, which is approximately 40 epochs over the 3.3 billion word corpus. (Comment: 256 * 512 * 1,000,000 / 3,300,000,000 = 39.7)
 N_WORKERS = 4
 CKPT_DIR = Path(__file__).parent/"checkpoints"
 N_PRINT_STEPS = 100
-N_CKPT_STEPS = 500
+N_CKPT_STEPS = 400
 ### Masked Language Model
 SELECT_PROB=0.15
 MASK_PROB=0.8

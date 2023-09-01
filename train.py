@@ -20,7 +20,7 @@ from utils import get_elapsed_time
 def get_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--batch_size", type=int, required=False, default=0)
+    parser.add_argument("--batch_size", type=int, required=False, default=256)
 
     args = parser.parse_args()
     return args
@@ -48,6 +48,10 @@ if __name__ == "__main__":
     args = get_args()
 
     BATCH_SIZE = args.batch_size if args.batch_size != 0 else config.BATCH_SIZE
+    # "We train with batch size of 256 sequences (256 sequences * 512 tokens
+    # = 128,000 tokens/batch) for 1,000,000 steps, which is approximately 40 epochs
+    # over the 3.3 billion word corpus." (Comment: 256 * 512 * 1,000,000 / 3,300,000,000
+    # = 39.7)
     N_STEPS = (256 * 512 * 1_000_000) // (BATCH_SIZE * config.MAX_LEN)
     print(f"""BATCH_SIZE = {BATCH_SIZE}""")
     print(f"""MAX_LEN = {config.MAX_LEN}""")
@@ -55,7 +59,10 @@ if __name__ == "__main__":
 
     tokenizer = load_bert_tokenizer(config.VOCAB_PATH)
     ds = BookCorpusForBERT(
-        epubtxt_dir=config.EPUBTXT_DIR, tokenizer=tokenizer, max_len=config.MAX_LEN
+        epubtxt_dir=config.EPUBTXT_DIR,
+        csv_path=config.TOKEN_IDS_PATH,
+        tokenizer=tokenizer,
+        max_len=config.MAX_LEN,
     )
     dl = DataLoader(
         ds,
@@ -131,9 +138,11 @@ if __name__ == "__main__":
             print(f"""[ {running_loss / step_cnt:.3f} ]""")
 
             running_loss = 0
+            step_cnt = 0
 
-        ckpt_path = config.CKPT_DIR/f"""step_{step}.pth"""
-        if (step % config.N_PRINT_STEPS == 0) or (step == N_STEPS):
-            save_checkpoint(
-                step=step, model=model, optim=optim, scaler=scaler, ckpt_path=ckpt_path
-            )
+        if (step % config.N_CKPT_STEPS == 0) or (step == N_STEPS):
+            ckpt_path = config.CKPT_DIR/f"""bookcorpus_step_{step}.pth"""
+            if (step % config.N_PRINT_STEPS == 0) or (step == N_STEPS):
+                save_checkpoint(
+                    step=step, model=model, optim=optim, scaler=scaler, ckpt_path=ckpt_path,
+                )
