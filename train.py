@@ -104,7 +104,7 @@ if __name__ == "__main__":
     step_cnt = 0
     prev_ckpt_path = ".pth"
     start_time = time()
-    for step in tqdm(range(1, N_STEPS + 1)):
+    for step in range(1, N_STEPS + 1):
         try:
             token_ids, seg_ids, is_next = next(di)
         except StopIteration:
