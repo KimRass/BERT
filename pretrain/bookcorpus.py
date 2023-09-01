@@ -35,34 +35,25 @@ class BookCorpusForBERT(Dataset):
         self.pad_id = tokenizer.token_to_id("[PAD]")
         self.unk_id = tokenizer.token_to_id("[UNK]")
 
-        self._parse_and_tokenize(
-            epubtxt_dir=epubtxt_dir, tokenizer=tokenizer,
-        )
+        self._parse()
+        self._tokenize()
 
-    # def _parse_and_tokenize(self, epubtxt_dir, tokenizer):
-    #     parags = list()
-    #     for doc_path in tqdm(list(Path(epubtxt_dir).glob("*.txt"))):
-    #         for parag in open(doc_path, mode="r", encoding="utf-8"):
-    #             parag = parag.strip()
-    #             if parag == "":
-    #                 continue
-
-    #             parags.append(parag)
-    #     encoded = tokenizer.encode_batch(parags)
-    #     print("Completed")
-    #     self.ls_token_ids = [i.ids[1: -1] for i in encoded]
-
-    def _parse_and_tokenize(self, epubtxt_dir, tokenizer):
-        print("Parsing and tokenizing BookCorpus...")
-        self.ls_token_ids = list()
-        for doc_path in tqdm(list(Path(epubtxt_dir).glob("*.txt"))):
-            parags = list()
+    def _parse(self):
+        print("Parsing BookCorpus...")
+        self.parags = list()
+        for doc_path in tqdm(list(Path(self.epubtxt_dir).glob("*.txt"))):
             for parag in open(doc_path, mode="r", encoding="utf-8"):
                 parag = parag.strip()
                 if parag != "":
-                    parags.append(parag)
-            encoded = tokenizer.encode_batch(parags)
-            self.ls_token_ids = [i.ids[1: -1] for i in encoded]
+                    self.parags.append(parag)
+        print("Completed")
+
+    def _tokenize(self):
+        print("Tokenizing BookCorpus...")
+        self.ls_token_ids = list()
+        for idx in tqdm(range(0, len(self.parags), 100)):
+            encoded = self.tokenizer.encode_batch(self.parags[idx: idx + 100])
+            self.ls_token_ids.extend([i.ids[1: -1] for i in encoded])
         print("Completed")
 
     def _to_bert_input(self, prev_token_ids, next_token_ids):
