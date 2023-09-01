@@ -60,7 +60,6 @@ if __name__ == "__main__":
     tokenizer = load_bert_tokenizer(config.VOCAB_PATH)
     ds = BookCorpusForBERT(
         epubtxt_dir=config.EPUBTXT_DIR,
-        csv_path=config.TOKEN_IDS_PATH,
         tokenizer=tokenizer,
         max_len=config.MAX_LEN,
     )
