@@ -186,8 +186,8 @@ class TransformerBlock(nn.Module):
         return x
 
 
-def _get_pad_mask(seq, pad_id=0):
-    mask = (seq == pad_id).unsqueeze(1).unsqueeze(3)
+def _get_pad_mask(token_ids, pad_id=0):
+    mask = (token_ids == pad_id).unsqueeze(1).unsqueeze(3)
     return mask
 
 
@@ -230,13 +230,13 @@ class BERT(nn.Module):
             resid_drop_prob=resid_drop_prob,
         )
 
-    def forward(self, seq, seg_ids):
-        x = self.token_embed(seq)
+    def forward(self, token_ids, seg_ids):
+        x = self.token_embed(token_ids)
         x = self.pos_embed(x)
         x += self.seg_embed(seg_ids)
         x = self.enmbed_drop(x)
 
-        pad_mask = _get_pad_mask(seq=seq, pad_id=self.pad_id)
+        pad_mask = _get_pad_mask(token_ids=token_ids, pad_id=self.pad_id)
         x = self.tf_block(x, self_attn_mask=pad_mask)
         return x
 
@@ -325,9 +325,11 @@ class BERTForPretraining(nn.Module):
             vocab_size=self.bert.vocab_size, hidden_size=self.bert.hidden_size,
         )
 
-    def forward(self, seq, seg_ids):
-        x = self.bert(seq=seq, seg_ids=seg_ids)
-        return self.nsp_head(x), self.mlm_head(x)
+    def forward(self, token_ids, seg_ids):
+        x = self.bert(token_ids=token_ids, seg_ids=seg_ids)
+        pred_is_next = self.nsp_head(x)
+        pred_token_ids = self.mlm_head(x)
+        return pred_is_next, pred_token_ids
 
 
 class BERTBaseForPretraining(nn.Module):
@@ -341,8 +343,8 @@ class BERTBaseForPretraining(nn.Module):
             vocab_size=self.bert.vocab_size, hidden_size=self.bert.hidden_size,
         )
 
-    def forward(self, seq, seg_ids):
-        x = self.bert(seq=seq, seg_ids=seg_ids)
+    def forward(self, token_ids, seg_ids):
+        x = self.bert(token_ids=token_ids, seg_ids=seg_ids)
         return self.nsp_head(x), self.mlm_head(x)
 
 

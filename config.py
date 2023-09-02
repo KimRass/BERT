@@ -31,8 +31,8 @@ if N_GPUS > 0:
 else:
     DEVICE = torch.device("cpu")
     print(f"""Using CPU(s).""")
-AUTOCAST = False
-N_WORKERS = 4
+AUTOCAST = True
+N_WORKERS = 5
 CKPT_DIR = Path(__file__).parent/"checkpoints"
 N_CKPT_SAMPLES = 60_000
 ### Masked Language Model
@@ -41,4 +41,4 @@ MASK_PROB=0.8
 RANDOMIZE_PROB=0.1
 
 ### Resume
-CKPT_PATH = CKPT_DIR/"bookcorpus_step_82500.pth"
+CKPT_PATH = None

@@ -14,7 +14,7 @@ from pretrain.wordpiece import load_bert_tokenizer
 from pretrain.bookcorpus import BookCorpusForBERT
 from model import BERTForPretraining
 from masked_language_model import MaskedLanguageModel
-from pretrain.loss import PretrainingLoss
+from pretrain.loss import LossForPretraining
 from utils import get_elapsed_time
 
 
@@ -103,7 +103,7 @@ if __name__ == "__main__":
 
     scaler = GradScaler(enabled=True if config.AUTOCAST else False)
 
-    crit = PretrainingLoss()
+    crit = LossForPretraining()
 
     ### Resume
     if config.CKPT_PATH is not None:
@@ -128,26 +128,28 @@ if __name__ == "__main__":
     step_cnt = 0
     for step in range(init_step + 1, N_STEPS + 1):
         try:
-            token_ids, seg_ids, is_next = next(di)
+            gt_token_ids, seg_ids, gt_is_next = next(di)
         except StopIteration:
             di = iter(dl)
-            token_ids, seg_ids, is_next = next(di)
+            gt_token_ids, seg_ids, gt_is_next = next(di)
 
-        token_ids = token_ids.to(config.DEVICE)
+        gt_token_ids = gt_token_ids.to(config.DEVICE)
         seg_ids = seg_ids.to(config.DEVICE)
-        is_next = is_next.to(config.DEVICE)
+        gt_is_next = gt_is_next.to(config.DEVICE)
 
-        token_ids = mlm(token_ids)
+        masked_token_ids = mlm(gt_token_ids)
 
         with torch.autocast(
             device_type=config.DEVICE.type,
             dtype=torch.float16,
             enabled=True if config.AUTOCAST else False,
         ):
-            nsp_pred, mlm_pred = model(seq=token_ids, seg_ids=seg_ids)
-            # loss = crit(
+            pred_is_next, pred_token_ids = model(token_ids=masked_token_ids, seg_ids=seg_ids)
             nsp_loss, mlm_loss = crit(
-                mlm_pred=mlm_pred, nsp_pred=nsp_pred, token_ids=token_ids, is_next=is_next,
+                pred_is_next=pred_is_next,
+                gt_is_next=gt_is_next,
+                pred_token_ids=pred_token_ids,
+                gt_token_ids=gt_token_ids,
             )
             loss = nsp_loss + mlm_loss
         optim.zero_grad()

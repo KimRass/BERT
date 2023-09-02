@@ -1,7 +1,6 @@
 # References
     # https://nn.labml.ai/transformers/mlm/index.html
 
-import sys
 import torch
 
 
@@ -26,12 +25,16 @@ class MaskedLanguageModel(object):
             self.no_mask_token_ids += [mask_id]
 
 
-    def __call__(self, x):
-        copied = x.clone()
+    def __call__(self, gt_token_ids):
+        masked_token_ids = gt_token_ids.clone()
 
-        rand_tensor = torch.rand(x.shape, device=x.device)
+        rand_tensor = torch.rand(masked_token_ids.shape, device=masked_token_ids.device)
         rand_tensor.masked_fill_(
-            mask=torch.isin(x, torch.as_tensor(self.no_mask_token_ids, device=x.device)), value=1,
+            mask=torch.isin(
+                masked_token_ids,
+                torch.as_tensor(self.no_mask_token_ids, device=masked_token_ids.device)
+            ),
+            value=1,
         )
 
         # "Chooses 15% of the token positions at random for prediction."
@@ -43,16 +46,17 @@ class MaskedLanguageModel(object):
 
         # "If the $i$-th token is chosen, we replace the $i$-th token with
         # (1) the [MASK] token 80% of the time"
-        x.masked_fill_(mask=mask_mask, value=self.mask_id)
+        masked_token_ids.masked_fill_(mask=mask_mask, value=self.mask_id)
 
         # "(2) a random token 10% of the time
         # (3) the unchanged $i$-th token 10% of the time."
         random_token_ids = torch.randint(
-            high=self.vocab_size, size=torch.Size((randomize_mask.sum(),)), device=x.device,
+            high=self.vocab_size,
+            size=torch.Size((randomize_mask.sum(),)),
+            device=masked_token_ids.device,
         )
-        x[randomize_mask.nonzero(as_tuple=True)] = random_token_ids
-        # return x, copied
-        return x
+        masked_token_ids[randomize_mask.nonzero(as_tuple=True)] = random_token_ids
+        return masked_token_ids
 
 
 # if __name__ == "__main__":
