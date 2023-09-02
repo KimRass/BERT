@@ -3,14 +3,13 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.optim import Adam
 import gc
-from tqdm.auto import tqdm
 from pathlib import Path
 from time import time
 
 import config
 from pretrain.wordpiece import load_bert_tokenizer
 from pretrain.bookcorpus import BookCorpusForBERT
-from model import BERTForPretraining, _get_pad_mask
+from model import BERTForPretraining
 from pretrain.masked_language_model import MaskedLanguageModel
 from pretrain.loss import LossForPretraining
 from utils import get_args, get_elapsed_time
@@ -42,8 +41,9 @@ if __name__ == "__main__":
     # = 128,000 tokens/batch) for 1,000,000 steps, which is approximately 40 epochs
     # over the 3.3 billion word corpus." (Comment: 256 * 512 * 1,000,000 / 3,300,000,000
     # = 39.7)
-    N_STEPS = (256 * 512 * 1_000_000) // (args.batch_size * config.MAX_LEN)
-    print(f"""BATCH_SIZE = {args.batch_size}""")
+    # 학습이 너무 오래 걸리므로 절반 만큼만 학습하겠습니다.
+    N_STEPS = (256 * 512 * 500_000) // (args.batch_size * config.MAX_LEN)
+    print(f"""N_WORKERS = {config.N_WORKERS}""")
     print(f"""MAX_LEN = {config.MAX_LEN}""")
     print(f"""N_STEPS = {N_STEPS:,}""", end="\n\n")
 
@@ -122,21 +122,12 @@ if __name__ == "__main__":
             gt_token_ids, seg_ids, gt_is_next = next(di)
 
         gt_token_ids = gt_token_ids.to(config.DEVICE)
-        # print(gt_token_ids)
-        # pad_mask = _get_pad_mask(token_ids=gt_token_ids, pad_id=ds.pad_id)
-        # print(pad_mask)
         seg_ids = seg_ids.to(config.DEVICE)
         gt_is_next = gt_is_next.to(config.DEVICE)
 
         masked_token_ids = mlm(gt_token_ids)
 
         pred_is_next, pred_token_ids = model(token_ids=masked_token_ids, seg_ids=seg_ids)
-        # print(gt_token_ids[0, : 10])
-        # print(masked_token_ids[0, : 10])
-        # argmax = pred_token_ids.argmax(dim=2)
-        # print(argmax[0, : 10])
-        # print((gt_token_ids != masked_token_ids).sum() / config.MAX_LEN)
-        # print((masked_token_ids == mlm.mask_id).sum() / config.MAX_LEN, end="\n\n")
         nsp_loss, mlm_loss = crit(
             pred_is_next=pred_is_next,
             gt_is_next=gt_is_next,

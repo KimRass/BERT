@@ -103,6 +103,7 @@ class PositionwiseFeedForward(nn.Module):
 
     def forward(self, x):
         x = self.proj1(x)
+        # "We use a gelu activation rather than the standard relu, following OpenAI GPT."
         x = F.gelu(x)
         x = self.mlp_drop(x) # Not in the paper
         x = self.proj2(x)

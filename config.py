@@ -14,7 +14,7 @@ MIN_FREQ = 5
 LIM_ALPHABET = 100
 
 ### Architecture
-DROP_PROB = 0.1 # "For the base model, we use a rate of $P_{drop} = 0.1$."
+DROP_PROB = 0.1 # "We use a dropout probability of 0.1 on all layers."
 N_LAYERS = 6
 N_HEADS = 6
 HIDDEN_SIZE = 384
@@ -26,16 +26,16 @@ BETA1 = 0.9
 BETA2 = 0.999
 WEIGHT_DECAY = 0.01
 N_WARMUP_STEPS = 10_000
-# "We use Adam with learning rate of 1e-4,  1 = 0:9, 2 = 0:999, L2 weight decay of 0:01, learning rate warmup over the first 10,000 steps, and linear decay of the learning rate. We use a dropout probability of 0.1 on all layers. We use a gelu activation (Hendrycks and Gimpel, 2016) rather than the standard relu, following OpenAI GPT. The training loss is the sum of the mean masked LM likelihood and the mean next sentence prediction likelihood. Training of BERTBASE was performed"
+# "We use Adam with learning rate of 1e-4, $beta_{1} = 0.9$, $beta_{2} = 0.999$,
+# L2 weight decay of 0.01, learning rate warmup over the first 10,000 steps,
+# and linear decay of the learning rate."
 
 ### Training
 N_GPUS = torch.cuda.device_count()
 if N_GPUS > 0:
     DEVICE = torch.device("cuda")
-    # print(f"""Using {N_GPUS} GPU(s).""")
 else:
     DEVICE = torch.device("cpu")
-    # print(f"""Using CPU(s).""")
 N_WORKERS = 4
 CKPT_DIR = Path(__file__).parent/"checkpoints"
 N_CKPT_SAMPLES = 60_000
