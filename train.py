@@ -11,7 +11,7 @@ import config
 from pretrain.wordpiece import load_bert_tokenizer
 from pretrain.bookcorpus import BookCorpusForBERT
 from model import BERTForPretraining
-from masked_language_model import MaskedLanguageModel
+from pretrain.masked_language_model import MaskedLanguageModel
 from pretrain.loss import LossForPretraining
 from utils import get_args, get_elapsed_time
 
@@ -122,6 +122,11 @@ if __name__ == "__main__":
         masked_token_ids = mlm(gt_token_ids)
 
         pred_is_next, pred_token_ids = model(token_ids=masked_token_ids, seg_ids=seg_ids)
+        argmax = pred_token_ids.argmax(dim=2)
+        print(gt_token_ids[0, : 5])
+        print(masked_token_ids[0, : 5])
+        print(argmax[0, : 5], end="\n\n")
+        print(gt_token_ids == masked_token_ids)
         nsp_loss, mlm_loss = crit(
             pred_is_next=pred_is_next,
             gt_is_next=gt_is_next,

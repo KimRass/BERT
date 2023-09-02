@@ -28,13 +28,14 @@ N_WARMUP_STEPS = 10_000
 N_GPUS = torch.cuda.device_count()
 if N_GPUS > 0:
     DEVICE = torch.device("cuda")
-    print(f"""Using {N_GPUS} GPU(s).""")
+    # print(f"""Using {N_GPUS} GPU(s).""")
 else:
     DEVICE = torch.device("cpu")
-    print(f"""Using CPU(s).""")
+    # print(f"""Using CPU(s).""")
 N_WORKERS = 4
 CKPT_DIR = Path(__file__).parent/"checkpoints"
-N_CKPT_SAMPLES = 60_000
+# N_CKPT_SAMPLES = 60_000
+N_CKPT_SAMPLES = 6000
 ### Masked Language Model
 SELECT_PROB=0.15
 MASK_PROB=0.8

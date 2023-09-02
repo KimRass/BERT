@@ -3,6 +3,9 @@
 
 import torch
 
+import config
+from pretrain.wordpiece import load_bert_tokenizer
+
 
 class MaskedLanguageModel(object):
     def __init__(
@@ -59,12 +62,12 @@ class MaskedLanguageModel(object):
         return masked_token_ids
 
 
-# if __name__ == "__main__":
-#     VOCAB_SIZE = 30_522
-#     vocab_path = "/Users/jongbeomkim/Desktop/workspace/transformer_based_models/bert/vocab_example.json"
-#     tokenizer = prepare_bert_tokenizer(vocab_path=vocab_path)
-#     cls_id = tokenizer.token_to_id("[CLS]")
-#     sep_id = tokenizer.token_to_id("[SEP]")
-#     mask_id = tokenizer.token_to_id("[MASK]")
-#     pad_id = tokenizer.token_to_id("[PAD]")
-#     mlm = MaskedLanguageModel(vocab_size=VOCAB_SIZE, mask_id=mask_id, no_mask_token_ids=[cls_id, sep_id, mask_id, pad_id])
+if __name__ == "__main__":
+    tokenizer = load_bert_tokenizer(config.VOCAB_PATH)
+    mlm = MaskedLanguageModel(
+        vocab_size=config.VOCAB_SIZE,
+        mask_id=tokenizer.token_to_id("[MASK]"),
+        select_prob=config.SELECT_PROB,
+        mask_prob=config.MASK_PROB,
+        randomize_prob=config.RANDOMIZE_PROB,
+    )

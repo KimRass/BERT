@@ -5,24 +5,26 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
-from typing import Literal
 
 import config
 from utils import print_number_of_parameters
 
 
-class PositionalEncoding(nn.Module):
-    def __init__(self, dim: int, max_len: int=5000) -> None:
+class TokenEmbedding(nn.Embedding):
+    def __init__(self, vocab_size, hidden_size, pad_id=0):
+        super().__init__(num_embeddings=vocab_size, embedding_dim=hidden_size, padding_idx=pad_id)
+
+
+class PositionEmbedding(nn.Module):
+    def __init__(self, hidden_size, max_len=2048) -> None:
         super().__init__()
 
-        self.dim = dim
-
         pos = torch.arange(max_len).unsqueeze(1) # "$pos$"
-        i = torch.arange(dim // 2).unsqueeze(0) # "$i$"
+        i = torch.arange(hidden_size // 2).unsqueeze(0) # "$i$"
          # "$\sin(\text{pos} / 10000^{2 * i  / d_{\text{model}}})$"
-        angle = pos / (10_000 ** (2 * i / dim))
+        angle = pos / (10_000 ** (2 * i / hidden_size))
 
-        self.pe_mat = torch.zeros(size=(max_len, dim))
+        self.pe_mat = torch.zeros(size=(max_len, hidden_size))
         self.pe_mat[:, 0:: 2] = torch.sin(angle) # "$text{PE}_(\text{pos}, 2i)$"
         self.pe_mat[:, 1:: 2] = torch.cos(angle) # "$text{PE}_(\text{pos}, 2i + 1)$"
 
@@ -34,87 +36,16 @@ class PositionalEncoding(nn.Module):
         return x
 
 
-class MultiHeadAttention(nn.Module):
-    def __init__(self, dim, n_heads, drop_prob=0.1):
-        super().__init__()
-    
-        self.dim = dim # "$d_{model}$"
-        self.n_heads = n_heads # "$h$"
-
-        self.head_size = dim // n_heads # "$d_{k}$, $d_{v}$"
-
-        self.q_proj = nn.Linear(dim, dim, bias=False) # "$W^{Q}_{i}$"
-        self.k_proj = nn.Linear(dim, dim, bias=False) # "$W^{K}_{i}$"
-        self.v_proj = nn.Linear(dim, dim, bias=False) # "$W^{V}_{i}$"
-
-        self.attn_drop = nn.Dropout(drop_prob) # Not in the paper
-        self.out_proj = nn.Linear(dim, dim, bias=False) # "$W^{O}$"
-
-    def _get_attention_score(self, q, k):
-        attn_score = torch.einsum("bnid,bnjd->bnij", q, k) # "MatMul" in "Figure 2" of the paper
-        return attn_score
-
-    def forward(self, q, k, v, mask=None):
-        b, l, _ = q.shape
-
-        q, k, v = self.q_proj(q), self.k_proj(k), self.v_proj(v)
-        q = q.view(b, self.n_heads, l, self.head_size)
-        k = k.view(b, self.n_heads, l, self.head_size)
-        v = v.view(b, self.n_heads, l, self.head_size)
-
-        attn_score = self._get_attention_score(q=q, k=k)
-        if mask is not None:
-            attn_score.masked_fill_(mask=mask, value=-1e9) # "Mask (opt.)"
-        attn_score /= (self.head_size ** 0.5) # "Scale"
-
-        attn_weight = F.softmax(attn_score, dim=3) # "Softmax"
-        attn_weight = self.attn_drop(attn_weight) # Not in the paper
-
-        x = torch.einsum("bnij,bnjd->bnid", attn_weight, v) # "MatMul"
-        x = rearrange(x, pattern="b n i d -> b i (n d)")
-
-        x = self.out_proj(x)
-        return x
-
-
-class PositionwiseFeedForward(nn.Module):
-    def __init__(self, dim, mlp_size, activ: Literal["relu", "gelu"]="relu", drop_prob=0.1):
-        super().__init__()
-
-        assert activ in ["relu", "gelu"],\
-            """The argument `activ` must be one of (`"relu"`, `"gelu"`)"""
-
-        self.dim = dim
-        self.mlp_size = mlp_size
-        self.activ = activ
-
-        self.proj1 = nn.Linear(dim, self.mlp_size) # "$W_{1}$"
-        if activ == "relu":
-            self.relu = nn.ReLU()
-        else:
-            self.gelu = nn.GELU()
-        self.proj2 = nn.Linear(self.mlp_size, dim) # "$W_{2}$"
-        self.mlp_drop = nn.Dropout(drop_prob)
-
-    def forward(self, x):
-        x = self.proj1(x)
-        if self.activ == "relu":
-            x = self.relu(x)
-        else:
-            x = self.gelu(x)
-        x = self.proj2(x)
-        x = self.mlp_drop(x) # Not in the paper
-        return x
+class SegmentEmbedding(nn.Embedding):
+    def __init__(self, hidden_size, pad_id=0):
+        super().__init__(num_embeddings=2, embedding_dim=hidden_size, padding_idx=pad_id)
 
 
 class ResidualConnection(nn.Module):
-    def __init__(self, dim, drop_prob=0.1):
+    def __init__(self, hidden_size, drop_prob=0.1):
         super().__init__()
 
-        self.dim = dim
-        self.drop_prob = drop_prob
-
-        self.norm = nn.LayerNorm(dim)
+        self.norm = nn.LayerNorm(hidden_size)
         self.resid_drop = nn.Dropout(drop_prob) # "Residual dropout"
 
     def forward(self, x, sublayer):
@@ -126,36 +57,67 @@ class ResidualConnection(nn.Module):
         return x
 
 
-class TokenEmbedding(nn.Embedding):
-    def __init__(self, vocab_size, embed_size, pad_id=0):
-        super().__init__(num_embeddings=vocab_size, embedding_dim=embed_size, padding_idx=pad_id)
+class MultiHeadAttention(nn.Module):
+    def __init__(self, hidden_size, n_heads, drop_prob=0.1):
+        super().__init__()
+    
+        self.n_heads = n_heads
+
+        self.head_size = hidden_size // n_heads
+
+        self.qkv_proj = nn.Linear(hidden_size, 3 * n_heads * self.head_size, bias=False)
+        self.attn_drop = nn.Dropout(drop_prob)
+        self.out_proj = nn.Linear(hidden_size, hidden_size, bias=False)
+
+    def _get_attention_score(self, q, k):
+        attn_score = torch.einsum("bhnd,bhmd->bhnm", q, k)
+        return attn_score
+
+    def forward(self, x, mask=None):
+        q, k, v = torch.split(
+            self.qkv_proj(x), split_size_or_sections=self.n_heads * self.head_size, dim=2,
+        )
+        q = rearrange(q, pattern="b n (h d) -> b h n d", h=self.n_heads, d=self.head_size)
+        k = rearrange(k, pattern="b n (h d) -> b h n d", h=self.n_heads, d=self.head_size)
+        v = rearrange(v, pattern="b n (h d) -> b h n d", h=self.n_heads, d=self.head_size)
+        attn_score = self._get_attention_score(q=q, k=k)
+        if mask is not None:
+            attn_score.masked_fill_(mask=mask, value=-1e9)
+        attn_weight = F.softmax(attn_score / (self.head_size ** 0.5), dim=3)
+        x = torch.einsum("bhnm,bhmd->bhnd", attn_weight, v)
+        x = rearrange(x, pattern="b h n d -> b n (h d)")
+        x = self.attn_drop(x)
+        x = self.out_proj(x)
+        return x
 
 
-class SegmentEmbedding(nn.Embedding):
-    def __init__(self, embed_size, pad_id=0):
-        super().__init__(num_embeddings=2, embedding_dim=embed_size, padding_idx=pad_id)
+class PositionwiseFeedForward(nn.Module):
+    def __init__(self, hidden_size, mlp_size, drop_prob=0.1):
+        super().__init__()
 
+        self.proj1 = nn.Linear(hidden_size, mlp_size) # "$W_{1}$"
+        self.proj2 = nn.Linear(mlp_size, hidden_size) # "$W_{2}$"
+        self.mlp_drop = nn.Dropout(drop_prob)
 
-class PositionEmbedding(PositionalEncoding):
-    def __init__(self, embed_size):
-        super().__init__(dim=embed_size)
+    def forward(self, x):
+        x = self.proj1(x)
+        x = F.gelu(x)
+        x = self.mlp_drop(x) # Not in the paper
+        x = self.proj2(x)
+        return x
 
 
 class TransformerLayer(nn.Module):
-    def __init__(self, dim, n_heads, mlp_size, attn_drop_prob=0.1, resid_drop_prob=0.1):
+    def __init__(self, hidden_size, n_heads, mlp_size, attn_drop_prob=0.1, resid_drop_prob=0.1):
         super().__init__()
 
-        self.n_heads = n_heads
-        self.dim = dim
-        self.mlp_size = mlp_size
-
-        self.self_attn = MultiHeadAttention(dim=dim, n_heads=n_heads, drop_prob=attn_drop_prob)
-        self.attn_resid_conn = ResidualConnection(dim=dim, drop_prob=resid_drop_prob)
-        self.feed_forward = PositionwiseFeedForward(dim=dim, mlp_size=mlp_size, activ="gelu")
-        self.ff_resid_conn = ResidualConnection(dim=dim, drop_prob=resid_drop_prob)
+        self.self_attn = MultiHeadAttention(hidden_size=hidden_size, n_heads=n_heads, drop_prob=attn_drop_prob)
+        self.attn_resid_conn = ResidualConnection(hidden_size=hidden_size, drop_prob=resid_drop_prob)
+        self.feed_forward = PositionwiseFeedForward(hidden_size=hidden_size, mlp_size=mlp_size)
+        self.ff_resid_conn = ResidualConnection(hidden_size=hidden_size, drop_prob=resid_drop_prob)
 
     def forward(self, x, mask=None):
-        x = self.attn_resid_conn(x=x, sublayer=lambda x: self.self_attn(q=x, k=x, v=x, mask=mask))
+        x = self.attn_resid_conn(x=x, sublayer=lambda x: self.self_attn(x, mask=mask))
         x = self.ff_resid_conn(x=x, sublayer=self.feed_forward)
         return x
 
@@ -164,15 +126,10 @@ class TransformerBlock(nn.Module):
     def __init__(self, n_layers, n_heads, hidden_size, mlp_size, attn_drop_prob, resid_drop_prob):
         super().__init__()
 
-        self.n_layers = n_layers
-        self.n_heads = n_heads
-        self.hidden_size = hidden_size
-        self.mlp_size = mlp_size
-
         self.enc_stack = nn.ModuleList([
             TransformerLayer(
                 n_heads=n_heads,
-                dim=hidden_size,
+                hidden_size=hidden_size,
                 mlp_size=mlp_size,
                 attn_drop_prob=attn_drop_prob,
                 resid_drop_prob=resid_drop_prob,
@@ -207,17 +164,12 @@ class BERT(nn.Module):
         super().__init__()
 
         self.vocab_size = vocab_size
-        self.n_layers = n_layers
         self.hidden_size = hidden_size
-        self.n_heads = n_heads
         self.pad_id = pad_id
-        self.embed_drop_prob = embed_drop_prob
-        self.attn_drop_prob = attn_drop_prob
-        self.resid_drop_prob = resid_drop_prob
 
-        self.token_embed = TokenEmbedding(vocab_size=vocab_size, embed_size=hidden_size, pad_id=pad_id)
-        self.seg_embed = SegmentEmbedding(embed_size=hidden_size, pad_id=pad_id)
-        self.pos_embed = PositionEmbedding(embed_size=hidden_size)
+        self.token_embed = TokenEmbedding(vocab_size=vocab_size, hidden_size=hidden_size, pad_id=pad_id)
+        self.pos_embed = PositionEmbedding(hidden_size=hidden_size)
+        self.seg_embed = SegmentEmbedding(hidden_size=hidden_size, pad_id=pad_id)
 
         self.enmbed_drop = nn.Dropout(embed_drop_prob)
 
@@ -264,9 +216,6 @@ class ClassificationHead(nn.Module):
     def __init__(self, hidden_size=768, n_classes=1000):
         super().__init__()
 
-        self.hidden_size = hidden_size
-        self.n_classed = n_classes
-
         self.cls_proj = nn.Linear(hidden_size, n_classes)
 
     def forward(self, x):
@@ -278,9 +227,6 @@ class ClassificationHead(nn.Module):
 class MLMHead(nn.Module):
     def __init__(self, vocab_size, hidden_size=768, drop_prob=0.1):
         super().__init__()
-
-        self.vocab_size = vocab_size
-        self.hidden_size = hidden_size
 
         self.cls_proj = nn.Linear(hidden_size, vocab_size)
         self.head_drop = nn.Dropout(drop_prob)
@@ -294,8 +240,6 @@ class MLMHead(nn.Module):
 class NSPHead(nn.Module):
     def __init__(self, hidden_size=768, drop_prob=0.1):
         super().__init__()
-
-        self.hidden_size = hidden_size
 
         self.cls_proj = nn.Linear(hidden_size, 2)
         self.head_drop = nn.Dropout(drop_prob)
@@ -320,7 +264,7 @@ class BERTForPretraining(nn.Module):
             pad_id=pad_id,
         )
 
-        self.nsp_head = NSPHead(self.bert.hidden_size)
+        self.nsp_head = NSPHead(hidden_size=self.bert.hidden_size)
         self.mlm_head = MLMHead(
             vocab_size=self.bert.vocab_size, hidden_size=self.bert.hidden_size,
         )
@@ -338,7 +282,7 @@ class BERTBaseForPretraining(nn.Module):
 
         self.bert = BERTBase(vocab_size=vocab_size)
 
-        self.nsp_head = NSPHead(self.bert.hidden_size)
+        self.nsp_head = NSPHead(hidden_size=self.bert.hidden_size)
         self.mlm_head = MLMHead(
             vocab_size=self.bert.vocab_size, hidden_size=self.bert.hidden_size,
         )
@@ -351,8 +295,6 @@ class BERTBaseForPretraining(nn.Module):
 class QuestionAnsweringHead(nn.Module):
     def __init__(self, hidden_size):
         super().__init__()
-
-        self.hidden_size = hidden_size
 
         # "We only introduce a start vector $S \in \mathbb{R}^{H}$ and an end vector
         # $E \in \mathbb{R}^{H}$ during fine-tuning."
@@ -372,8 +314,6 @@ class MultipleChoiceHead(nn.Module):
     def __init__(self, hidden_size):
         super().__init__()
 
-        self.hidden_size = hidden_size
-
         self.proj = nn.Linear(hidden_size, 1)
 
     def forward(self, x):
@@ -384,13 +324,13 @@ class MultipleChoiceHead(nn.Module):
 
 
 if __name__ == "__main__":
-    model = BERT( # Smaller than BERT-Base
-        vocab_size=config.VOCAB_SIZE,
-        n_layers=6,
-        n_heads=6,
-        hidden_size=384,
-        mlp_size=384 * 4,
-    )
+    # model = BERT( # Smaller than BERT-Base
+    #     vocab_size=config.VOCAB_SIZE,
+    #     n_layers=6,
+    #     n_heads=6,
+    #     hidden_size=384,
+    #     mlp_size=384 * 4,
+    # )
+    model = BERTLarge(vocab_size=config.VOCAB_SIZE)
     # model = BERTBase(vocab_size=config.VOCAB_SIZE)
-    # model = BERTLarge(vocab_size=config.VOCAB_SIZE)
     print_number_of_parameters(model)
