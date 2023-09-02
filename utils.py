@@ -1,6 +1,14 @@
 from time import time
 from datetime import timedelta
 
+LANG_REGEX = {
+    "ko": r"[ㄱ-ㅎㅏ-ㅣ가-힣]+",
+    "ja": r"[ぁ-ゔァ-ヴー々〆〤ｧ-ﾝﾞﾟ]+",
+    "zh": r"[\u4e00-\u9fff]+",
+    "zhcn": r"[\u4e00-\u9fff]+",
+    "zhtw": r"[\u4e00-\u9fff]+",
+}
+
 
 def get_elapsed_time(start_time):
     return timedelta(seconds=round(time() - start_time))

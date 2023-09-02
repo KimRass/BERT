@@ -31,7 +31,7 @@ if N_GPUS > 0:
 else:
     DEVICE = torch.device("cpu")
     print(f"""Using CPU(s).""")
-AUTOCAST = True
+AUTOCAST = False
 N_WORKERS = 5
 CKPT_DIR = Path(__file__).parent/"checkpoints"
 N_CKPT_SAMPLES = 60_000
