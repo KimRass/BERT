@@ -1,13 +1,25 @@
 from time import time
 from datetime import timedelta
+import argparse
 
 LANG_REGEX = {
     "ko": r"[ㄱ-ㅎㅏ-ㅣ가-힣]+",
     "ja": r"[ぁ-ゔァ-ヴー々〆〤ｧ-ﾝﾞﾟ]+",
     "zh": r"[\u4e00-\u9fff]+",
-    "zhcn": r"[\u4e00-\u9fff]+",
-    "zhtw": r"[\u4e00-\u9fff]+",
 }
+REGEX = r"[ㄱ-ㅎㅏ-ㅣ가-힣ぁ-ゔァ-ヴー々〆〤ｧ-ﾝﾞﾟ\u4e00-\u9fff]+"
+
+
+def get_args():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--epubtxt_dir", type=str, required=False, default="../bookcurpus/epubtxt",
+    )
+    parser.add_argument("--batch_size", type=int, required=False, default=256)
+
+    args = parser.parse_args()
+    return args
 
 
 def get_elapsed_time(start_time):

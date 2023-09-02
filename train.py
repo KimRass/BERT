@@ -2,11 +2,9 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.optim import Adam
-from torch.cuda.amp import GradScaler
 import gc
 from tqdm.auto import tqdm
 from pathlib import Path
-import argparse
 from time import time
 
 import config
@@ -15,27 +13,14 @@ from pretrain.bookcorpus import BookCorpusForBERT
 from model import BERTForPretraining
 from masked_language_model import MaskedLanguageModel
 from pretrain.loss import LossForPretraining
-from utils import get_elapsed_time
+from utils import get_args, get_elapsed_time
 
 
-def get_args():
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument(
-        "--epubtxt_dir", type=str, required=False, default="../bookcurpus/epubtxt",
-    )
-    parser.add_argument("--batch_size", type=int, required=False, default=256)
-
-    args = parser.parse_args()
-    return args
-
-
-def save_checkpoint(step, model, optim, scaler, ckpt_path):
+def save_checkpoint(step, model, optim, ckpt_path):
     Path(ckpt_path).parent.mkdir(parents=True, exist_ok=True)
     ckpt = {
         "step": step,
         "optimizer": optim.state_dict(),
-        "scaler": scaler.state_dict(),
     }
     if config.N_GPUS > 1:
         ckpt["model"] = model.module.state_dict()
@@ -101,8 +86,6 @@ if __name__ == "__main__":
         weight_decay=config.WEIGHT_DECAY,
     )
 
-    scaler = GradScaler(enabled=True if config.AUTOCAST else False)
-
     crit = LossForPretraining()
 
     ### Resume
@@ -113,7 +96,6 @@ if __name__ == "__main__":
         else:
             model.load_state_dict(ckpt["model"])
         optim.load_state_dict(ckpt["optimizer"])
-        scaler.load_state_dict(ckpt["scaler"])
         init_step = ckpt["step"]
         prev_ckpt_path = config.CKPT_PATH
         print(f"""Resuming from checkpoint\n    '{config.CKPT_PATH}'...""")
@@ -139,27 +121,18 @@ if __name__ == "__main__":
 
         masked_token_ids = mlm(gt_token_ids)
 
-        with torch.autocast(
-            device_type=config.DEVICE.type,
-            dtype=torch.float16,
-            enabled=True if config.AUTOCAST else False,
-        ):
-            pred_is_next, pred_token_ids = model(token_ids=masked_token_ids, seg_ids=seg_ids)
-            nsp_loss, mlm_loss = crit(
-                pred_is_next=pred_is_next,
-                gt_is_next=gt_is_next,
-                pred_token_ids=pred_token_ids,
-                gt_token_ids=gt_token_ids,
-            )
-            loss = nsp_loss + mlm_loss
+        pred_is_next, pred_token_ids = model(token_ids=masked_token_ids, seg_ids=seg_ids)
+        nsp_loss, mlm_loss = crit(
+            pred_is_next=pred_is_next,
+            gt_is_next=gt_is_next,
+            pred_token_ids=pred_token_ids,
+            gt_token_ids=gt_token_ids,
+        )
+        loss = nsp_loss + mlm_loss
+
         optim.zero_grad()
-        if config.AUTOCAST:
-            scaler.scale(loss).backward()
-            scaler.step(optim)
-            scaler.update()
-        else:
-            loss.backward()
-            optim.step()
+        loss.backward()
+        optim.step()
 
         running_nsp_loss += nsp_loss.item()
         running_mlm_loss += mlm_loss.item()
@@ -167,8 +140,8 @@ if __name__ == "__main__":
 
         if (step % (config.N_CKPT_SAMPLES // args.batch_size) == 0) or (step == N_STEPS):
             print(f"""[ {step:,}/{N_STEPS:,} ][ {get_elapsed_time(start_time)} ]""", end="")
-            print(f"""[ NSP loss: {running_nsp_loss / step_cnt:.3f} ]""", end="")
-            print(f"""[ MLM loss: {running_mlm_loss / step_cnt:.3f} ]""")
+            print(f"""[ NSP loss: {running_nsp_loss / step_cnt:.4f} ]""", end="")
+            print(f"""[ MLM loss: {running_mlm_loss / step_cnt:.4f} ]""")
 
             start_time = time()
             running_nsp_loss = 0
@@ -176,9 +149,7 @@ if __name__ == "__main__":
             step_cnt = 0
 
             cur_ckpt_path = config.CKPT_DIR/f"""bookcorpus_step_{step}.pth"""
-            save_checkpoint(
-                step=step, model=model, optim=optim, scaler=scaler, ckpt_path=cur_ckpt_path,
-            )
+            save_checkpoint(step=step, model=model, optim=optim, ckpt_path=cur_ckpt_path)
             if Path(prev_ckpt_path).exists():
                 prev_ckpt_path.unlink()
             prev_ckpt_path = cur_ckpt_path

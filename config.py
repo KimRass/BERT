@@ -11,6 +11,7 @@ MAX_LEN = 512
 ### BookCorpus
 VOCAB_PATH = Path(__file__).parent/"pretrain/bookcorpus_vocab.json"
 MIN_FREQ = 5
+LIM_ALPHABET = 100
 
 ### Architecture
 DROP_PROB = 0.1 # "For the base model, we use a rate of $P_{drop} = 0.1$."
@@ -31,8 +32,7 @@ if N_GPUS > 0:
 else:
     DEVICE = torch.device("cpu")
     print(f"""Using CPU(s).""")
-AUTOCAST = False
-N_WORKERS = 5
+N_WORKERS = 4
 CKPT_DIR = Path(__file__).parent/"checkpoints"
 N_CKPT_SAMPLES = 60_000
 ### Masked Language Model

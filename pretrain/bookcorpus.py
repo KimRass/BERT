@@ -13,9 +13,11 @@ from torch.utils.data import Dataset, DataLoader
 import random
 from pathlib import Path
 from tqdm.auto import tqdm
+import re
 
 import config
-from pretrain.wordpiece import train_bert_tokenizer, load_bert_tokenizer
+from utils import REGEX
+from pretrain.wordpiece import parse
 
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
 
@@ -36,17 +38,7 @@ class BookCorpusForBERT(Dataset):
         self.pad_id = tokenizer.token_to_id("[PAD]")
         self.unk_id = tokenizer.token_to_id("[UNK]")
 
-        self._parse()
-
-    def _parse(self):
-        print("Parsing BookCorpus...")
-        self.parags = list()
-        for doc_path in tqdm(list(Path(self.epubtxt_dir).glob("*.txt"))):
-            for parag in open(doc_path, mode="r", encoding="utf-8"):
-                parag = parag.strip()
-                if parag != "":
-                    self.parags.append(parag)
-        print("Completed")
+        self.parags = parse(epubtxt_dir)
 
     def _to_bert_input(self, cur_token_ids, next_token_ids):
         token_ids = (
