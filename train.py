@@ -2,40 +2,26 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.optim import Adam
-from torch.cuda.amp import GradScaler
 import gc
 from tqdm.auto import tqdm
 from pathlib import Path
-import argparse
 from time import time
 
 import config
 from pretrain.wordpiece import load_bert_tokenizer
 from pretrain.bookcorpus import BookCorpusForBERT
-from model import BERTBaseForPretraining
-from masked_language_model import MaskedLanguageModel
-from pretrain.loss import PretrainingLoss
-from utils import get_elapsed_time
+from model import BERTForPretraining, _get_pad_mask
+from pretrain.masked_language_model import MaskedLanguageModel
+from pretrain.loss import LossForPretraining
+from utils import get_args, get_elapsed_time
+from pretrain.evalute import get_nsp_acc, get_mlm_acc
 
 
-def get_args():
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument(
-        "--epubtxt_dir", type=str, required=False, default="../bookcurpus/epubtxt",
-    )
-    parser.add_argument("--batch_size", type=int, required=False, default=256)
-
-    args = parser.parse_args()
-    return args
-
-
-def save_checkpoint(step, model, optim, scaler, ckpt_path):
+def save_checkpoint(step, model, optim, ckpt_path):
     Path(ckpt_path).parent.mkdir(parents=True, exist_ok=True)
     ckpt = {
         "step": step,
         "optimizer": optim.state_dict(),
-        "scaler": scaler.state_dict(),
     }
     if config.N_GPUS > 1:
         ckpt["model"] = model.module.state_dict()
@@ -77,12 +63,21 @@ if __name__ == "__main__":
     )
     di = iter(dl)
 
-    model = BERTBaseForPretraining(vocab_size=config.VOCAB_SIZE).to(config.DEVICE)
+    model = BERTForPretraining( # Smaller than BERT-Base
+        vocab_size=config.VOCAB_SIZE,
+        pad_id=ds.pad_id,
+        n_layers=config.N_LAYERS,
+        n_heads=config.N_HEADS,
+        hidden_size=config.HIDDEN_SIZE,
+        mlp_size=config.MLP_SIZE,
+    ).to(config.DEVICE)
     if config.N_GPUS > 1:
         model = nn.DataParallel(model)
+    no_mask_token_ids = [ds.cls_id, ds.sep_id, ds.pad_id, ds.unk_id]
     mlm = MaskedLanguageModel(
         vocab_size=config.VOCAB_SIZE,
         mask_id=tokenizer.token_to_id("[MASK]"),
+        no_mask_token_ids=no_mask_token_ids,
         select_prob=config.SELECT_PROB,
         mask_prob=config.MASK_PROB,
         randomize_prob=config.RANDOMIZE_PROB,
@@ -95,9 +90,7 @@ if __name__ == "__main__":
         weight_decay=config.WEIGHT_DECAY,
     )
 
-    scaler = GradScaler(enabled=True if config.AUTOCAST else False)
-
-    crit = PretrainingLoss()
+    crit = LossForPretraining()
 
     ### Resume
     if config.CKPT_PATH is not None:
@@ -107,7 +100,6 @@ if __name__ == "__main__":
         else:
             model.load_state_dict(ckpt["model"])
         optim.load_state_dict(ckpt["optimizer"])
-        scaler.load_state_dict(ckpt["scaler"])
         init_step = ckpt["step"]
         prev_ckpt_path = config.CKPT_PATH
         print(f"""Resuming from checkpoint\n    '{config.CKPT_PATH}'...""")
@@ -116,60 +108,69 @@ if __name__ == "__main__":
         prev_ckpt_path = ".pth"
 
     print("Training...")
-    running_nsp_loss = 0
-    running_mlm_loss = 0
-    step_cnt = 0
     start_time = time()
+    accum_nsp_loss = 0
+    accum_mlm_loss = 0
+    accum_nsp_acc = 0
+    accum_mlm_acc = 0
+    step_cnt = 0
     for step in range(init_step + 1, N_STEPS + 1):
         try:
-            token_ids, seg_ids, is_next = next(di)
+            gt_token_ids, seg_ids, gt_is_next = next(di)
         except StopIteration:
             di = iter(dl)
-            token_ids, seg_ids, is_next = next(di)
+            gt_token_ids, seg_ids, gt_is_next = next(di)
 
-        token_ids = token_ids.to(config.DEVICE)
+        gt_token_ids = gt_token_ids.to(config.DEVICE)
+        # print(gt_token_ids)
+        # pad_mask = _get_pad_mask(token_ids=gt_token_ids, pad_id=ds.pad_id)
+        # print(pad_mask)
         seg_ids = seg_ids.to(config.DEVICE)
-        is_next = is_next.to(config.DEVICE)
+        gt_is_next = gt_is_next.to(config.DEVICE)
 
-        token_ids = mlm(token_ids)
+        masked_token_ids = mlm(gt_token_ids)
 
-        with torch.autocast(
-            device_type=config.DEVICE.type,
-            dtype=torch.float16,
-            enabled=True if config.AUTOCAST else False,
-        ):
-            nsp_pred, mlm_pred = model(seq=token_ids, seg_ids=seg_ids)
-            # loss = crit(
-            nsp_loss, mlm_loss = crit(
-                mlm_pred=mlm_pred, nsp_pred=nsp_pred, token_ids=token_ids, is_next=is_next,
-            )
-            loss = nsp_loss + mlm_loss
+        pred_is_next, pred_token_ids = model(token_ids=masked_token_ids, seg_ids=seg_ids)
+        # print(gt_token_ids[0, : 10])
+        # print(masked_token_ids[0, : 10])
+        # argmax = pred_token_ids.argmax(dim=2)
+        # print(argmax[0, : 10])
+        # print((gt_token_ids != masked_token_ids).sum() / config.MAX_LEN)
+        # print((masked_token_ids == mlm.mask_id).sum() / config.MAX_LEN, end="\n\n")
+        nsp_loss, mlm_loss = crit(
+            pred_is_next=pred_is_next,
+            gt_is_next=gt_is_next,
+            pred_token_ids=pred_token_ids,
+            gt_token_ids=gt_token_ids,
+        )
+        loss = nsp_loss + mlm_loss
+
         optim.zero_grad()
-        if config.AUTOCAST:
-            scaler.scale(loss).backward()
-            scaler.step(optim)
-            scaler.update()
-        else:
-            loss.backward()
-            optim.step()
+        loss.backward()
+        optim.step()
 
-        running_nsp_loss += nsp_loss.item()
-        running_mlm_loss += mlm_loss.item()
+        accum_nsp_loss += nsp_loss.item()
+        accum_mlm_loss += mlm_loss.item()
+        accum_nsp_acc += get_nsp_acc(pred_is_next=pred_is_next, gt_is_next=gt_is_next)
+        accum_mlm_acc += get_mlm_acc(pred_token_ids=pred_token_ids, gt_token_ids=gt_token_ids)
         step_cnt += 1
 
         if (step % (config.N_CKPT_SAMPLES // args.batch_size) == 0) or (step == N_STEPS):
             print(f"""[ {step:,}/{N_STEPS:,} ][ {get_elapsed_time(start_time)} ]""", end="")
-            print(f"""[ NSP loss: {running_nsp_loss / step_cnt:.3f} ]""", end="")
-            print(f"""[ MLM loss: {running_mlm_loss / step_cnt:.3f} ]""")
+            print(f"""[ NSP loss: {accum_nsp_loss / step_cnt:.4f} ]""", end="")
+            print(f"""[ MLM loss: {accum_mlm_loss / step_cnt:.4f} ]""", end="")
+            print(f"""[ NSP acc: {accum_nsp_acc / step_cnt:.3f} ]""", end="")
+            print(f"""[ MLM acc: {accum_mlm_acc / step_cnt:.3f} ]""")
 
-            running_nsp_loss = 0
-            running_mlm_loss = 0
+            start_time = time()
+            accum_nsp_loss = 0
+            accum_mlm_loss = 0
+            accum_nsp_acc = 0
+            accum_mlm_acc = 0
             step_cnt = 0
 
             cur_ckpt_path = config.CKPT_DIR/f"""bookcorpus_step_{step}.pth"""
-            save_checkpoint(
-                step=step, model=model, optim=optim, scaler=scaler, ckpt_path=cur_ckpt_path,
-            )
+            save_checkpoint(step=step, model=model, optim=optim, ckpt_path=cur_ckpt_path)
             if Path(prev_ckpt_path).exists():
                 prev_ckpt_path.unlink()
             prev_ckpt_path = cur_ckpt_path

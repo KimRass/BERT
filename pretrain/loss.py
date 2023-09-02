@@ -2,18 +2,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class PretrainingLoss(nn.Module):
+class LossForPretraining(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(self, mlm_pred, nsp_pred, token_ids, is_next):
-        raw_mlm_loss = F.cross_entropy(
-            mlm_pred.permute(0, 2, 1), token_ids, reduction="none",
+    def forward(self, pred_is_next, gt_is_next, pred_token_ids, gt_token_ids,):
+        mlm_loss = F.cross_entropy(
+            pred_token_ids.permute(0, 2, 1), gt_token_ids, reduction="mean",
         )
-        # raw_mlm_loss *= gt["prediction_target"]
-        mlm_loss = raw_mlm_loss.sum()
 
-        nsp_loss = F.cross_entropy(nsp_pred, is_next)
-        # loss = mlm_loss + nsp_loss
-        # return loss
+        nsp_loss = F.cross_entropy(pred_is_next, gt_is_next)
         return nsp_loss, mlm_loss

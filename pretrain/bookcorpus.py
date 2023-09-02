@@ -9,13 +9,22 @@
 # such as the Billion Word Benchmark."
 import os
 import torch
+<<<<<<< HEAD
+from torch.utils.data import Dataset
+import random
+
+import config
+=======
 from torch.utils.data import Dataset, DataLoader
 import random
 from pathlib import Path
 from tqdm.auto import tqdm
+import re
 
 import config
-from pretrain.wordpiece import train_bert_tokenizer, load_bert_tokenizer
+from utils import REGEX
+>>>>>>> d7255345c7291ffa9a9b3c9af8c1ab9a86d1a631
+from pretrain.wordpiece import parse
 
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
 
@@ -36,23 +45,21 @@ class BookCorpusForBERT(Dataset):
         self.pad_id = tokenizer.token_to_id("[PAD]")
         self.unk_id = tokenizer.token_to_id("[UNK]")
 
-        self._parse()
-
-    def _parse(self):
-        print("Parsing BookCorpus...")
-        self.parags = list()
-        for doc_path in tqdm(list(Path(self.epubtxt_dir).glob("*.txt"))):
-            for parag in open(doc_path, mode="r", encoding="utf-8"):
-                parag = parag.strip()
-                if parag != "":
-                    self.parags.append(parag)
-        print("Completed")
+        self.parags = parse(epubtxt_dir)
 
     def _to_bert_input(self, cur_token_ids, next_token_ids):
+<<<<<<< HEAD
+        ### Add '[CLS]' and '[SEP]' tokens.
+        token_ids = (
+            [self.cls_id] + cur_token_ids[: self.max_len - 3] + [self.sep_id] + next_token_ids
+        )[: self.max_len - 1] + [self.sep_id]
+        ### Pad.
+=======
         token_ids = (
             [self.cls_id] + cur_token_ids[: self.max_len - 3] + [self.sep_id] + next_token_ids
         )[: self.max_len - 1] + [self.sep_id]
         ### Pad
+>>>>>>> d7255345c7291ffa9a9b3c9af8c1ab9a86d1a631
         token_ids += [self.pad_id] * (self.max_len - len(token_ids))
         return torch.as_tensor(token_ids)
 
@@ -88,6 +95,8 @@ class BookCorpusForBERT(Dataset):
         )
         seg_ids = self._token_ids_to_segment_ids(token_ids)
         return token_ids, seg_ids, is_next
+<<<<<<< HEAD
+=======
 
 
 if __name__ == "__main__":
@@ -98,3 +107,4 @@ if __name__ == "__main__":
     )
     token_ids, seg_ids, is_next = ds[10]
     token_ids
+>>>>>>> d7255345c7291ffa9a9b3c9af8c1ab9a86d1a631
