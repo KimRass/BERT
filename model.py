@@ -83,11 +83,8 @@ class MultiHeadAttention(nn.Module):
         attn_score = self._get_attention_score(q=q, k=k)
         if mask is not None:
             attn_score.masked_fill_(mask=mask, value=-1e9)
-<<<<<<< HEAD
             # print(mask[0, 0, ...])
             # print(attn_score[0, 0, ...])
-=======
->>>>>>> d7255345c7291ffa9a9b3c9af8c1ab9a86d1a631
         attn_weight = F.softmax(attn_score / (self.head_size ** 0.5), dim=3)
         x = torch.einsum("bhnm,bhmd->bhnd", attn_weight, v)
         x = rearrange(x, pattern="b h n d -> b n (h d)")
