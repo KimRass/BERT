@@ -55,7 +55,7 @@ if __name__ == "__main__":
     ds = BookCorpusForBERT(
         epubtxt_dir=args.epubtxt_dir,
         tokenizer=tokenizer,
-        max_len=config.SEQ_LEN,
+        seq_len=config.SEQ_LEN,
     )
     dl = DataLoader(
         ds,
