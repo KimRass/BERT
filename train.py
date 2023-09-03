@@ -40,15 +40,17 @@ if __name__ == "__main__":
 
     args = get_args()
 
+    print(f"""BATCH_SIZE = {args.batch_size}""")
+    print(f"""N_WORKERS = {config.N_WORKERS}""")
+    print(f"""MAX_LEN = {config.MAX_LEN}""")
+    print(f"""SEQ_LEN = {config.SEQ_LEN}""")
+
     # "We train with batch size of 256 sequences (256 sequences * 512 tokens
     # = 128,000 tokens/batch) for 1,000,000 steps, which is approximately 40 epochs
     # over the 3.3 billion word corpus." (Comment: 256 * 512 * 1,000,000 / 3,300,000,000
     # = 39.7)
     # 학습이 너무 오래 걸리므로 절반 만큼만 학습하겠습니다.
-    N_STEPS = (256 * 512 * 500_000) // (args.batch_size * config.SEQ_LEN)
-    print(f"""N_WORKERS = {config.N_WORKERS}""")
-    print(f"""MAX_LEN = {config.MAX_LEN}""")
-    print(f"""SEQ_LEN = {config.SEQ_LEN}""")
+    N_STEPS = (256 * 512 * 1_000_000) // (args.batch_size * config.SEQ_LEN)
     print(f"""N_STEPS = {N_STEPS:,}""", end="\n\n")
 
     tokenizer = load_bert_tokenizer(config.VOCAB_PATH)
