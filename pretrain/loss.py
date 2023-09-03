@@ -13,7 +13,7 @@ class LossForPretraining(nn.Module):
 
     # def forward(self, pred_is_next, gt_is_next, pred_token_ids, gt_token_ids):
     def forward(self, pred_is_next, gt_is_next):
-        print(F.softmax(pred_is_next, dim=-1))
+        print(torch.argmax(pred_is_next, dim=-1))
         print(gt_is_next)
         nsp_loss = self.ce(pred_is_next, gt_is_next)
         # mlm_loss = self.ce(pred_token_ids.permute(0, 2, 1), gt_token_ids)
