@@ -130,9 +130,10 @@ if __name__ == "__main__":
         seg_ids = seg_ids.to(config.DEVICE)
         gt_is_next = gt_is_next.to(config.DEVICE)
 
-        masked_token_ids = mlm(gt_token_ids)
+        # masked_token_ids = mlm(gt_token_ids)
 
-        pred_is_next = model(token_ids=masked_token_ids, seg_ids=seg_ids)
+        # pred_is_next = model(token_ids=masked_token_ids, seg_ids=seg_ids)
+        pred_is_next = model(token_ids=gt_token_ids, seg_ids=seg_ids)
         # print(pred_is_next)
         nsp_loss = crit(
             pred_is_next=pred_is_next,
