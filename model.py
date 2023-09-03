@@ -242,7 +242,7 @@ class MLMHead(nn.Module):
 
     def forward(self, x):
         x = self.cls_proj(x)
-        x = self.head_drop(x)
+        # x = self.head_drop(x)
         return x
 
 
@@ -256,7 +256,7 @@ class NSPHead(nn.Module):
     def forward(self, x):
         x = x[:, 0, :]
         x = self.cls_proj(x)
-        x = self.head_drop(x)
+        # x = self.head_drop(x)
         return x
 
 

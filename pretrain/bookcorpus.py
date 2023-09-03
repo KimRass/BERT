@@ -36,24 +36,24 @@ class BookCorpusForBERT(Dataset):
 
         self.parags = parse(epubtxt_dir)
 
-    def _to_bert_input(self, cur_token_ids, next_token_ids):
+    def _to_bert_input(self, former_token_ids, latter_token_ids):
         ### Add '[CLS]' and '[SEP]' tokens.
         token_ids = (
-            [self.cls_id] + cur_token_ids[: self.seq_len - 3] + [self.sep_id] + next_token_ids
+            [self.cls_id] + former_token_ids[: self.seq_len - 3] + [self.sep_id] + latter_token_ids
         )[: self.seq_len - 1] + [self.sep_id]
         ### Pad.
         token_ids += [self.pad_id] * (self.seq_len - len(token_ids))
         return torch.as_tensor(token_ids)
 
-    def _sample_next_sentence(self, idx):
+    def _sample_latter_sentence(self, idx):
         if random.random() < 0.5:
-            next_idx = idx + 1
+            latter_idx = idx + 1
             is_next = 1
         else:
-            next_idx = random.randrange(len(self.parags))
+            latter_idx = random.randrange(len(self.parags))
             is_next = 0
-        next_parag = self.parags[next_idx]
-        return next_parag, torch.as_tensor(is_next)
+        latter_parag = self.parags[latter_idx]
+        return latter_parag, torch.as_tensor(is_next)
 
     def _token_ids_to_segment_ids(self, token_ids):
         seg_ids = torch.zeros_like(token_ids, dtype=token_ids.dtype, device=token_ids.device)
@@ -68,12 +68,12 @@ class BookCorpusForBERT(Dataset):
 
     def __getitem__(self, idx):
         parag = self.parags[idx]
-        cur_token_ids = self.tokenizer.encode(parag).ids[1: -1]
-        next_parag, is_next = self._sample_next_sentence(idx)
-        next_token_ids = self.tokenizer.encode(next_parag).ids[1: -1]
+        former_token_ids = self.tokenizer.encode(parag).ids[1: -1]
+        latter_parag, is_next = self._sample_latter_sentence(idx)
+        latter_token_ids = self.tokenizer.encode(latter_parag).ids[1: -1]
 
         token_ids = self._to_bert_input(
-            cur_token_ids=cur_token_ids, next_token_ids=next_token_ids,
+            former_token_ids=former_token_ids, latter_token_ids=latter_token_ids,
         )
         seg_ids = self._token_ids_to_segment_ids(token_ids)
         return token_ids, seg_ids, is_next
