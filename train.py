@@ -15,6 +15,9 @@ from pretrain.loss import LossForPretraining
 from utils import get_args, get_elapsed_time
 from pretrain.evalute import get_nsp_acc, get_mlm_acc
 
+# torch.set_printoptions(sci_mode=False)
+# torch.set_printoptions(linewidth=180)
+
 
 def save_checkpoint(step, model, optim, ckpt_path):
     Path(ckpt_path).parent.mkdir(parents=True, exist_ok=True)
@@ -73,7 +76,6 @@ if __name__ == "__main__":
         hidden_size=config.HIDDEN_SIZE,
         mlp_size=config.MLP_SIZE,
     ).to(config.DEVICE)
-    print(model)
     if config.N_GPUS > 1:
         model = nn.DataParallel(model)
     no_mask_token_ids = [ds.cls_id, ds.sep_id, ds.pad_id, ds.unk_id]
@@ -130,6 +132,7 @@ if __name__ == "__main__":
 
         masked_token_ids = mlm(gt_token_ids)
 
+        print(masked_token_ids[0, ...])
         pred_is_next = model(token_ids=masked_token_ids, seg_ids=seg_ids)
         # print(pred_is_next)
         nsp_loss = crit(

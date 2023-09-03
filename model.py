@@ -32,13 +32,13 @@ class ResidualConnection(nn.Module):
         super().__init__()
 
         self.norm = nn.LayerNorm(hidden_size)
-        # self.resid_drop = nn.Dropout(drop_prob) # "Residual dropout"
+        self.resid_drop = nn.Dropout(drop_prob)
 
     def forward(self, x, sublayer):
         skip = x.clone()
         x = self.norm(x)
         x = sublayer(x)
-        # x = self.resid_drop(x)
+        x = self.resid_drop(x)
         x += skip
         return x
 
@@ -67,11 +67,12 @@ class MultiHeadAttention(nn.Module):
         k = rearrange(k, pattern="b n (h d) -> b h n d", h=self.n_heads, d=self.head_size)
         v = rearrange(v, pattern="b n (h d) -> b h n d", h=self.n_heads, d=self.head_size)
         attn_score = self._get_attention_score(q=q, k=k)
+        attn_score /= (self.head_size ** 0.5)
         if mask is not None:
             attn_score.masked_fill_(mask=mask, value=-1e9)
-            # print(mask[0, 0, ...])
-            # print(attn_score[0, 0, ...])
-        attn_weight = F.softmax(attn_score / (self.head_size ** 0.5), dim=3)
+        attn_weight = F.softmax(attn_score, dim=3)
+        # print(attn_score[0, 0, ...])
+        # print(attn_weight[0, 0, ...])
         x = torch.einsum("bhnm,bhmd->bhnd", attn_weight, v)
         x = rearrange(x, pattern="b h n d -> b n (h d)")
         x = self.attn_drop(x)
@@ -92,9 +93,9 @@ class PositionwiseFeedForward(nn.Module):
         x = self.proj1(x)
         # "We use a gelu activation rather than the standard relu, following OpenAI GPT."
         x = F.gelu(x)
-        # x = self.mlp_drop1(x)
+        x = self.mlp_drop1(x)
         x = self.proj2(x)
-        # x = self.mlp_drop2(x)
+        x = self.mlp_drop2(x)
         return x
 
 
@@ -143,7 +144,7 @@ class TransformerBlock(nn.Module):
 
 
 def _get_pad_mask(token_ids, pad_id):
-    mask = (token_ids == pad_id).unsqueeze(1).unsqueeze(3)
+    mask = (token_ids == pad_id).unsqueeze(1).unsqueeze(2)
     return mask
 
 
@@ -193,7 +194,7 @@ class BERT(nn.Module):
         x += self.seg_embed(seg_ids)
         # print(seg_ids[0])
         # print(self.seg_embed(seg_ids)[0])
-        # x = self.embed_drop(x)
+        x = self.embed_drop(x)
 
         pad_mask = _get_pad_mask(token_ids=token_ids, pad_id=self.pad_id)
         # print(token_ids[0, :])
@@ -242,7 +243,7 @@ class MLMHead(nn.Module):
 
     def forward(self, x):
         x = self.cls_proj(x)
-        # x = self.head_drop(x)
+        x = self.head_drop(x)
         return x
 
 
@@ -256,7 +257,7 @@ class NSPHead(nn.Module):
     def forward(self, x):
         x = x[:, 0, :]
         x = self.cls_proj(x)
-        # x = self.head_drop(x)
+        x = self.head_drop(x)
         return x
 
 
