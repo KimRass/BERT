@@ -20,10 +20,8 @@ LIM_ALPHABET = 100
 
 ### Architecture
 DROP_PROB = 0.1 # "We use a dropout probability of 0.1 on all layers."
-# N_LAYERS = 6
-# N_HEADS = 6
-N_LAYERS = 1
-N_HEADS = 1
+N_LAYERS = 6
+N_HEADS = 6
 HIDDEN_SIZE = 384
 MLP_SIZE = 384 * 4
 
