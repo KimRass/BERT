@@ -11,6 +11,7 @@ import os
 import torch
 from torch.utils.data import Dataset
 import random
+from tqdm.auto import tqdm
 
 import config
 from pretrain.wordpiece import parse
@@ -18,16 +19,18 @@ from pretrain.wordpiece import parse
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
 
 
-class BookCorpusForBERT(Dataset):
+class BookCorpusDataset(Dataset):
     def __init__(
         self,
         epubtxt_dir,
         tokenizer,
         seq_len,
+        chunk_size=2 ** 12,
     ):
         self.epubtxt_dir = epubtxt_dir
         self.tokenizer = tokenizer
         self.seq_len = seq_len
+        self.chunk_size = chunk_size
 
         self.cls_id = tokenizer.token_to_id("[CLS]")
         self.sep_id = tokenizer.token_to_id("[SEP]")
@@ -35,6 +38,15 @@ class BookCorpusForBERT(Dataset):
         self.unk_id = tokenizer.token_to_id("[UNK]")
 
         self.parags = parse(epubtxt_dir)
+        self._tokenize()
+
+    def _tokenize(self):
+        print("Tokenizing BookCorpus...")
+        self.ls_token_ids = list()
+        for idx in tqdm(range(0, len(self.parags), self.chunk_size)):
+            encoded = self.tokenizer.encode_batch(self.parags[idx: idx + self.chunk_size])
+            self.ls_token_ids.extend([i.ids[1: -1] for i in encoded])
+        print("Completed")
 
     def _to_bert_input(self, former_token_ids, latter_token_ids):
         ### Add '[CLS]' and '[SEP]' tokens.
@@ -46,15 +58,17 @@ class BookCorpusForBERT(Dataset):
         return torch.as_tensor(token_ids)
 
     def _sample_latter_sentence(self, idx):
-        if random.random() < 0.8:
+        if random.random() < 0.5:
             latter_idx = idx + 1
             is_next = 1
         else:
             latter_idx = random.randrange(len(self.parags))
             is_next = 0
         # print(idx, latter_idx, is_next)
-        latter_parag = self.parags[latter_idx]
-        return latter_parag, torch.as_tensor(is_next)
+        # latter_parag = self.parags[latter_idx]
+        latter_token_ids = self.ls_token_ids[latter_idx]
+        return latter_token_ids, torch.as_tensor(is_next)
+        # return latter_parag, torch.as_tensor(is_next)
 
     def _token_ids_to_segment_ids(self, token_ids):
         seg_ids = torch.zeros_like(token_ids, dtype=token_ids.dtype, device=token_ids.device)
@@ -65,13 +79,16 @@ class BookCorpusForBERT(Dataset):
         return seg_ids
 
     def __len__(self):
-        return len(self.parags) - 1
+        # return len(self.parags) - 1
+        return len(self.ls_token_ids) - 1
 
     def __getitem__(self, idx):
-        parag = self.parags[idx]
-        former_token_ids = self.tokenizer.encode(parag).ids[1: -1]
-        latter_parag, is_next = self._sample_latter_sentence(idx)
-        latter_token_ids = self.tokenizer.encode(latter_parag).ids[1: -1]
+        # former_parag = self.parags[idx]
+        # former_token_ids = self.tokenizer.encode(former_parag).ids[1: -1]
+        # latter_parag, is_next = self._sample_latter_sentence(idx)
+        # latter_token_ids = self.tokenizer.encode(latter_parag).ids[1: -1]
+        former_token_ids = self.ls_token_ids[idx]
+        latter_token_ids, is_next = self._sample_latter_sentence(idx)
 
         token_ids = self._to_bert_input(
             former_token_ids=former_token_ids, latter_token_ids=latter_token_ids,

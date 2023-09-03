@@ -42,6 +42,7 @@ if N_GPUS > 0:
 else:
     DEVICE = torch.device("cpu")
 N_WORKERS = 4
+# N_WORKERS = 0
 CKPT_DIR = Path(__file__).parent/"checkpoints"
 # N_CKPT_SAMPLES = 40_000
 N_CKPT_SAMPLES = 4000

@@ -8,7 +8,7 @@ from time import time
 
 import config
 from pretrain.wordpiece import load_bert_tokenizer
-from pretrain.bookcorpus import BookCorpusForBERT
+from pretrain.bookcorpus import BookCorpusDataset
 from pretrain.model import BERTForPretraining
 from pretrain.masked_language_model import MaskedLanguageModel
 from pretrain.loss import LossForPretraining
@@ -52,7 +52,7 @@ if __name__ == "__main__":
     print(f"""N_STEPS = {N_STEPS:,}""", end="\n\n")
 
     tokenizer = load_bert_tokenizer(config.VOCAB_PATH)
-    ds = BookCorpusForBERT(
+    ds = BookCorpusDataset(
         epubtxt_dir=args.epubtxt_dir,
         tokenizer=tokenizer,
         seq_len=config.SEQ_LEN,
@@ -92,7 +92,7 @@ if __name__ == "__main__":
         model.parameters(),
         lr=config.MAX_LR,
         betas=(config.BETA1, config.BETA2),
-        weight_decay=config.WEIGHT_DECAY,
+        # weight_decay=config.WEIGHT_DECAY,
     )
 
     crit = LossForPretraining()
