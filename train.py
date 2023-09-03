@@ -127,31 +127,34 @@ if __name__ == "__main__":
 
         masked_token_ids = mlm(gt_token_ids)
 
-        pred_is_next, pred_token_ids = model(token_ids=masked_token_ids, seg_ids=seg_ids)
-        nsp_loss, mlm_loss = crit(
+        # pred_is_next, pred_token_ids = model(token_ids=masked_token_ids, seg_ids=seg_ids)
+        pred_is_next = model(token_ids=masked_token_ids, seg_ids=seg_ids)
+        # nsp_loss, mlm_loss = crit(
+        nsp_loss = crit(
             pred_is_next=pred_is_next,
             gt_is_next=gt_is_next,
-            pred_token_ids=pred_token_ids,
-            gt_token_ids=gt_token_ids,
+            # pred_token_ids=pred_token_ids,
+            # gt_token_ids=gt_token_ids,
         )
-        loss = nsp_loss + mlm_loss
+        # loss = nsp_loss + mlm_loss
+        loss = nsp_loss
 
         optim.zero_grad()
         loss.backward()
         optim.step()
 
         accum_nsp_loss += nsp_loss.item()
-        accum_mlm_loss += mlm_loss.item()
+        # accum_mlm_loss += mlm_loss.item()
         accum_nsp_acc += get_nsp_acc(pred_is_next=pred_is_next, gt_is_next=gt_is_next)
-        accum_mlm_acc += get_mlm_acc(pred_token_ids=pred_token_ids, gt_token_ids=gt_token_ids)
+        # accum_mlm_acc += get_mlm_acc(pred_token_ids=pred_token_ids, gt_token_ids=gt_token_ids)
         step_cnt += 1
 
         if (step % (config.N_CKPT_SAMPLES // args.batch_size) == 0) or (step == N_STEPS):
             print(f"""[ {step:,}/{N_STEPS:,} ][ {get_elapsed_time(start_time)} ]""", end="")
             print(f"""[ NSP loss: {accum_nsp_loss / step_cnt:.4f} ]""", end="")
-            print(f"""[ MLM loss: {accum_mlm_loss / step_cnt:.4f} ]""", end="")
+            # print(f"""[ MLM loss: {accum_mlm_loss / step_cnt:.4f} ]""", end="")
             print(f"""[ NSP acc: {accum_nsp_acc / step_cnt:.3f} ]""", end="")
-            print(f"""[ MLM acc: {accum_mlm_acc / step_cnt:.3f} ]""")
+            # print(f"""[ MLM acc: {accum_mlm_acc / step_cnt:.3f} ]""")
 
             start_time = time()
             accum_nsp_loss = 0
