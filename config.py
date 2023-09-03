@@ -6,7 +6,7 @@ import torch
 from pathlib import Path
 
 ### Data
-VOCAB_SIZE = 30_522 // 2
+VOCAB_SIZE = 30_522 // 2 # 학습이 너무 오래 걸리므로 절반으로 줄이겠습니다.
 MAX_LEN = 512
 ### BookCorpus
 VOCAB_PATH = Path(__file__).parent/"pretrain/bookcorpus_vocab.json"

@@ -126,6 +126,7 @@ if __name__ == "__main__":
         gt_is_next = gt_is_next.to(config.DEVICE)
 
         masked_token_ids = mlm(gt_token_ids)
+        print(gt_token_ids[0, : 10])
 
         # pred_is_next, pred_token_ids = model(token_ids=masked_token_ids, seg_ids=seg_ids)
         pred_is_next = model(token_ids=masked_token_ids, seg_ids=seg_ids)
@@ -153,7 +154,7 @@ if __name__ == "__main__":
             print(f"""[ {step:,}/{N_STEPS:,} ][ {get_elapsed_time(start_time)} ]""", end="")
             print(f"""[ NSP loss: {accum_nsp_loss / step_cnt:.4f} ]""", end="")
             # print(f"""[ MLM loss: {accum_mlm_loss / step_cnt:.4f} ]""", end="")
-            print(f"""[ NSP acc: {accum_nsp_acc / step_cnt:.3f} ]""", end="")
+            print(f"""[ NSP acc: {accum_nsp_acc / step_cnt:.3f} ]""")
             # print(f"""[ MLM acc: {accum_mlm_acc / step_cnt:.3f} ]""")
 
             start_time = time()

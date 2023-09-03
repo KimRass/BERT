@@ -114,10 +114,18 @@ class TransformerLayer(nn.Module):
     def __init__(self, hidden_size, n_heads, mlp_size, attn_drop_prob=0.1, resid_drop_prob=0.1):
         super().__init__()
 
-        self.self_attn = MultiHeadAttention(hidden_size=hidden_size, n_heads=n_heads, drop_prob=attn_drop_prob)
-        self.attn_resid_conn = ResidualConnection(hidden_size=hidden_size, drop_prob=resid_drop_prob)
-        self.feed_forward = PositionwiseFeedForward(hidden_size=hidden_size, mlp_size=mlp_size)
-        self.ff_resid_conn = ResidualConnection(hidden_size=hidden_size, drop_prob=resid_drop_prob)
+        self.self_attn = MultiHeadAttention(
+            hidden_size=hidden_size, n_heads=n_heads, drop_prob=attn_drop_prob,
+        )
+        self.attn_resid_conn = ResidualConnection(
+            hidden_size=hidden_size, drop_prob=resid_drop_prob,
+        )
+        self.feed_forward = PositionwiseFeedForward(
+            hidden_size=hidden_size, mlp_size=mlp_size,
+        )
+        self.ff_resid_conn = ResidualConnection(
+            hidden_size=hidden_size, drop_prob=resid_drop_prob,
+        )
 
     def forward(self, x, mask=None):
         x = self.attn_resid_conn(x=x, sublayer=lambda x: self.self_attn(x, mask=mask))
@@ -170,7 +178,9 @@ class BERT(nn.Module):
         self.hidden_size = hidden_size
         self.pad_id = pad_id
 
-        self.token_embed = TokenEmbedding(vocab_size=vocab_size, hidden_size=hidden_size, pad_id=pad_id)
+        self.token_embed = TokenEmbedding(
+            vocab_size=vocab_size, hidden_size=hidden_size, pad_id=pad_id,
+        )
         self.pos_embed = PositionEmbedding(hidden_size=hidden_size)
         self.seg_embed = SegmentEmbedding(hidden_size)
 
@@ -310,7 +320,8 @@ class QuestionAnsweringHead(nn.Module):
 
     def forward(self, x):
         # "The probability of word $i$ being the start of the answer span is computed
-        # as a dot product between $T_{i}$ and $S$ followed by a softmax over all of the words in the paragraph."
+        # as a dot product between $T_{i}$ and $S$ followed by a softmax over all of the words
+        # in the paragraph."
         x = self.proj(x)
         start_logit, end_logit = torch.split(x, split_size_or_sections=1, dim=2)
         start_logit, end_logit = start_logit.squeeze(), end_logit.squeeze()
