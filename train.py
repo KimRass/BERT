@@ -126,18 +126,11 @@ if __name__ == "__main__":
         gt_token_ids = gt_token_ids.to(config.DEVICE)
         seg_ids = seg_ids.to(config.DEVICE)
         gt_is_next = gt_is_next.to(config.DEVICE)
-        # print(seg_ids)
 
         masked_token_ids = mlm(gt_token_ids)
-        # print(gt_token_ids[0, : 10])
 
-        # pred_is_next, pred_token_ids = model(token_ids=masked_token_ids, seg_ids=seg_ids)
-        # print(seg_ids[0, ...].sum())
         pred_is_next = model(token_ids=masked_token_ids, seg_ids=seg_ids)
-        # print(pred_is_next.shape, gt_is_next.shape)
         # print(pred_is_next)
-        # print(gt_is_next)
-        # nsp_loss, mlm_loss = crit(
         nsp_loss = crit(
             pred_is_next=pred_is_next,
             gt_is_next=gt_is_next,

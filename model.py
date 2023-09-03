@@ -32,13 +32,13 @@ class ResidualConnection(nn.Module):
         super().__init__()
 
         self.norm = nn.LayerNorm(hidden_size)
-        self.resid_drop = nn.Dropout(drop_prob) # "Residual dropout"
+        # self.resid_drop = nn.Dropout(drop_prob) # "Residual dropout"
 
     def forward(self, x, sublayer):
         skip = x.clone()
         x = self.norm(x)
         x = sublayer(x)
-        x = self.resid_drop(x)
+        # x = self.resid_drop(x)
         x += skip
         return x
 
@@ -85,14 +85,16 @@ class PositionwiseFeedForward(nn.Module):
 
         self.proj1 = nn.Linear(hidden_size, mlp_size) # "$W_{1}$"
         self.proj2 = nn.Linear(mlp_size, hidden_size) # "$W_{2}$"
-        self.mlp_drop = nn.Dropout(drop_prob)
+        self.mlp_drop2 = nn.Dropout(drop_prob)
+        self.mlp_drop1 = nn.Dropout(drop_prob)
 
     def forward(self, x):
         x = self.proj1(x)
         # "We use a gelu activation rather than the standard relu, following OpenAI GPT."
         x = F.gelu(x)
-        x = self.mlp_drop(x) # Not in the paper
+        x = self.mlp_drop1(x)
         x = self.proj2(x)
+        x = self.mlp_drop2(x)
         return x
 
 
@@ -172,7 +174,7 @@ class BERT(nn.Module):
         self.pos_embed = PositionEmbedding(max_len=max_len, hidden_size=hidden_size)
         self.seg_embed = SegmentEmbedding(hidden_size)
 
-        self.enmbed_drop = nn.Dropout(embed_drop_prob)
+        self.embed_drop = nn.Dropout(embed_drop_prob)
 
         self.tf_block = TransformerBlock(
             n_layers=n_layers,
@@ -191,7 +193,7 @@ class BERT(nn.Module):
         x += self.seg_embed(seg_ids)
         # print(seg_ids[0])
         # print(self.seg_embed(seg_ids)[0])
-        x = self.enmbed_drop(x)
+        x = self.embed_drop(x)
 
         pad_mask = _get_pad_mask(token_ids=token_ids, pad_id=self.pad_id)
         # print(token_ids[0, :])
