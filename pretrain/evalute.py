@@ -3,7 +3,8 @@ import torch
     
 def get_nsp_acc(pred_is_next, gt_is_next):
     argmax = torch.argmax(pred_is_next, dim=1)
-    acc = (gt_is_next == argmax).sum() / gt_is_next.numel()
+    # acc = (gt_is_next == argmax).sum() / gt_is_next.numel()
+    acc = (gt_is_next == argmax).float().mean()
     return acc.item()
 
 

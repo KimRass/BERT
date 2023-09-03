@@ -126,10 +126,14 @@ if __name__ == "__main__":
         gt_is_next = gt_is_next.to(config.DEVICE)
 
         masked_token_ids = mlm(gt_token_ids)
-        print(gt_token_ids[0, : 10])
+        # print(gt_token_ids[0, : 10])
 
         # pred_is_next, pred_token_ids = model(token_ids=masked_token_ids, seg_ids=seg_ids)
+        # print(seg_ids[0, ...].sum())
         pred_is_next = model(token_ids=masked_token_ids, seg_ids=seg_ids)
+        # print(pred_is_next.shape, gt_is_next.shape)
+        # print(pred_is_next)
+        # print(gt_is_next)
         # nsp_loss, mlm_loss = crit(
         nsp_loss = crit(
             pred_is_next=pred_is_next,
@@ -146,8 +150,10 @@ if __name__ == "__main__":
 
         accum_nsp_loss += nsp_loss.item()
         # accum_mlm_loss += mlm_loss.item()
-        accum_nsp_acc += get_nsp_acc(pred_is_next=pred_is_next, gt_is_next=gt_is_next)
-        # accum_mlm_acc += get_mlm_acc(pred_token_ids=pred_token_ids, gt_token_ids=gt_token_ids)
+        nsp_acc = get_nsp_acc(pred_is_next=pred_is_next, gt_is_next=gt_is_next)
+        # mlm_acc = get_mlm_acc(pred_token_ids=pred_token_ids, gt_token_ids=gt_token_ids)
+        accum_nsp_acc += nsp_acc
+        # accum_mlm_acc += mlm_acc
         step_cnt += 1
 
         if (step % (config.N_CKPT_SAMPLES // args.batch_size) == 0) or (step == N_STEPS):
