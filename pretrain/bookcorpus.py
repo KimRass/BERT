@@ -52,6 +52,7 @@ class BookCorpusForBERT(Dataset):
         else:
             latter_idx = random.randrange(len(self.parags))
             is_next = 0
+        # print(idx, latter_idx, is_next)
         latter_parag = self.parags[latter_idx]
         return latter_parag, torch.as_tensor(is_next)
 
