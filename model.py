@@ -190,12 +190,18 @@ class BERT(nn.Module):
         )
 
     def forward(self, token_ids, seg_ids):
+        # print(token_ids)
+        # print(seg_ids)
         b, l = token_ids.shape
         pos = torch.arange(l).unsqueeze(0).repeat(b, 1).to(token_ids.device)
         x = self.token_embed(token_ids)
+        # print(x)
         x += self.pos_embed(pos)
+        # print(self.pos_embed(pos))
         x += self.seg_embed(seg_ids)
-        x = self.embed_drop(x)
+        # print(self.seg_embed(seg_ids).shape)
+        # print(self.seg_embed(seg_ids)[..., : 4])
+        # x = self.embed_drop(x)
 
         pad_mask = _get_pad_mask(token_ids=token_ids, pad_id=self.pad_id)
         x = self.tf_block(x, mask=pad_mask)
