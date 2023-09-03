@@ -13,7 +13,6 @@ from torch.utils.data import Dataset
 import random
 from tqdm.auto import tqdm
 
-import config
 from pretrain.wordpiece import parse
 
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
@@ -25,7 +24,7 @@ class BookCorpusDataset(Dataset):
         epubtxt_dir,
         tokenizer,
         seq_len,
-        chunk_size=2 ** 12,
+        chunk_size=2 ** 14,
     ):
         self.epubtxt_dir = epubtxt_dir
         self.tokenizer = tokenizer
@@ -37,14 +36,14 @@ class BookCorpusDataset(Dataset):
         self.pad_id = tokenizer.token_to_id("[PAD]")
         self.unk_id = tokenizer.token_to_id("[UNK]")
 
-        self.parags = parse(epubtxt_dir)
+        self.lines = parse(epubtxt_dir)
         self._tokenize()
 
     def _tokenize(self):
         print("Tokenizing BookCorpus...")
         self.ls_token_ids = list()
-        for idx in tqdm(range(0, len(self.parags), self.chunk_size)):
-            encoded = self.tokenizer.encode_batch(self.parags[idx: idx + self.chunk_size])
+        for idx in tqdm(range(0, len(self.lines), self.chunk_size)):
+            encoded = self.tokenizer.encode_batch(self.lines[idx: idx + self.chunk_size])
             self.ls_token_ids.extend([i.ids[1: -1] for i in encoded])
         print("Completed")
 
@@ -62,7 +61,7 @@ class BookCorpusDataset(Dataset):
             latter_idx = idx + 1
             is_next = 1
         else:
-            latter_idx = random.randrange(len(self.parags))
+            latter_idx = random.randrange(len(self.lines))
             is_next = 0
         latter_token_ids = self.ls_token_ids[latter_idx]
         return latter_token_ids, torch.as_tensor(is_next)

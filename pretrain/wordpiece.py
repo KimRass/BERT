@@ -18,15 +18,16 @@ from utils import get_args, REGEX
 
 def parse(epubtxt_dir):
     print("Parsing BookCorpus...")
-    parags = list()
+    lines = list()
     for doc_path in tqdm(list(Path(epubtxt_dir).glob("*.txt"))):
-        for parag in open(doc_path, mode="r", encoding="utf-8"):
-            parag = parag.strip()
-            if (not parag) or (re.search(pattern=REGEX, string=parag)):
-                continue
-            parags.append(parag)
+        with open(doc_path, mode="r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if (not line) or (re.search(pattern=REGEX, string=line)):
+                    continue
+                lines.append(line)
     print("Completed")
-    return parags
+    return lines
 
 
 def train_bert_tokenizer(
