@@ -57,6 +57,7 @@ class MultiHeadAttention(nn.Module):
 
     def _get_attention_score(self, q, k):
         attn_score = torch.einsum("bhnd,bhmd->bhnm", q, k)
+        attn_score /= (self.head_size ** 0.5)
         return attn_score
 
     def forward(self, x, mask=None):
@@ -67,12 +68,11 @@ class MultiHeadAttention(nn.Module):
         k = rearrange(k, pattern="b n (h d) -> b h n d", h=self.n_heads, d=self.head_size)
         v = rearrange(v, pattern="b n (h d) -> b h n d", h=self.n_heads, d=self.head_size)
         attn_score = self._get_attention_score(q=q, k=k)
-        attn_score /= (self.head_size ** 0.5)
         if mask is not None:
             attn_score.masked_fill_(mask=mask, value=-1e9)
         attn_weight = F.softmax(attn_score, dim=3)
-        # print(attn_score[0, 0, ...])
-        # print(attn_weight[0, 0, ...])
+        # print(attn_weight)
+        # print(attn_weight.sum(dim=3))
         x = torch.einsum("bhnm,bhmd->bhnd", attn_weight, v)
         x = rearrange(x, pattern="b h n d -> b n (h d)")
         x = self.attn_drop(x)
@@ -123,7 +123,9 @@ class TransformerLayer(nn.Module):
 
 
 class TransformerBlock(nn.Module):
-    def __init__(self, n_layers, n_heads, hidden_size, mlp_size, attn_drop_prob, resid_drop_prob):
+    def __init__(
+        self, n_layers, n_heads, hidden_size, mlp_size, attn_drop_prob, resid_drop_prob
+    ):
         super().__init__()
 
         self.enc_stack = nn.ModuleList([
@@ -145,6 +147,7 @@ class TransformerBlock(nn.Module):
 
 def _get_pad_mask(token_ids, pad_id):
     mask = (token_ids == pad_id).unsqueeze(1).unsqueeze(2)
+    mask.requires_grad = False
     return mask
 
 
@@ -192,13 +195,9 @@ class BERT(nn.Module):
         x = self.token_embed(token_ids)
         x += self.pos_embed(pos)
         x += self.seg_embed(seg_ids)
-        # print(seg_ids[0])
-        # print(self.seg_embed(seg_ids)[0])
         x = self.embed_drop(x)
 
         pad_mask = _get_pad_mask(token_ids=token_ids, pad_id=self.pad_id)
-        # print(token_ids[0, :])
-        # print(pad_mask[0, 0, :, 0])
         x = self.tf_block(x, mask=pad_mask)
         return x
 

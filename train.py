@@ -16,7 +16,7 @@ from utils import get_args, get_elapsed_time
 from pretrain.evalute import get_nsp_acc, get_mlm_acc
 
 # torch.set_printoptions(sci_mode=False)
-# torch.set_printoptions(linewidth=180)
+torch.set_printoptions(linewidth=180)
 
 
 def save_checkpoint(step, model, optim, ckpt_path):
@@ -133,6 +133,7 @@ if __name__ == "__main__":
         masked_token_ids = mlm(gt_token_ids)
 
         pred_is_next = model(token_ids=masked_token_ids, seg_ids=seg_ids)
+        print(pred_is_next)
         nsp_loss = crit(
             pred_is_next=pred_is_next,
             gt_is_next=gt_is_next,
