@@ -24,7 +24,7 @@ class BookCorpusDataset(Dataset):
         epubtxt_dir,
         tokenizer,
         seq_len,
-        tokenize_in_advance=True,
+        tokenize_in_advance=False,
         chunk_size=2 ** 6,
     ):
         self.epubtxt_dir = epubtxt_dir
