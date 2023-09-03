@@ -157,6 +157,8 @@ if __name__ == "__main__":
         step_cnt += 1
 
         if (step % (config.N_CKPT_SAMPLES // args.batch_size) == 0) or (step == N_STEPS):
+            print(torch.argmax(pred_is_next, dim=-1))
+            # print(gt_is_next, end="\n\n")
             print(f"""[ {step:,}/{N_STEPS:,} ][ {get_elapsed_time(start_time)} ]""", end="")
             print(f"""[ NSP loss: {accum_nsp_loss / step_cnt:.4f} ]""", end="")
             # print(f"""[ MLM loss: {accum_mlm_loss / step_cnt:.4f} ]""", end="")
