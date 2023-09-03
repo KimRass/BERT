@@ -15,6 +15,7 @@ class LossForPretraining(nn.Module):
         # print(gt_is_next)
         nsp_loss = self.ce(pred_is_next, gt_is_next)
         print(pred_is_next)
+        print(nsp_loss.item(), end="\n\n")
         # mlm_loss = self.ce(pred_token_ids.permute(0, 2, 1), gt_token_ids)
         # return nsp_loss, mlm_loss
         return nsp_loss

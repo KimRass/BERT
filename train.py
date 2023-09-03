@@ -142,10 +142,10 @@ if __name__ == "__main__":
             # gt_token_ids=gt_token_ids,
         )
         # loss = nsp_loss + mlm_loss
-        loss = nsp_loss
 
         optim.zero_grad()
-        loss.backward()
+        # loss.backward()
+        nsp_loss.backward()
         optim.step()
 
         accum_nsp_loss += nsp_loss.item()
