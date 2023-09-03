@@ -185,7 +185,7 @@ class BERT(nn.Module):
 
     def forward(self, token_ids, seg_ids):
         b, l = token_ids.shape
-        pos = torch.arange(l).unsqueeze(0).repeat(b, 1)
+        pos = torch.arange(l).unsqueeze(0).repeat(b, 1).to(token_ids.device)
         x = self.token_embed(token_ids)
         x += self.pos_embed(pos)
         x += self.seg_embed(seg_ids)
