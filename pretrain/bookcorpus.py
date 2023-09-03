@@ -66,8 +66,12 @@ class BookCorpusDataset(Dataset):
         else:
             latter_idx = random.randrange(len(self.lines))
             is_next = 0
-        latter_token_ids = self.ls_token_ids[latter_idx]
-        return latter_token_ids, torch.as_tensor(is_next)
+        if self.tokenize_in_advance:
+            latter_token_ids = self.ls_token_ids[latter_idx]
+            return latter_token_ids, torch.as_tensor(is_next)
+        else:
+            latter_line = self.lines[latter_idx]
+            return latter_line, torch.as_tensor(is_next)
 
     def _token_ids_to_segment_ids(self, token_ids):
         seg_ids = torch.zeros_like(token_ids, dtype=token_ids.dtype, device=token_ids.device)
