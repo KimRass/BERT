@@ -24,9 +24,7 @@ class NSPHead(nn.Module):
         self.head_drop = nn.Dropout(drop_prob)
 
     def forward(self, x):
-        # print(x.shape)
         x = x[:, 0, :]
-        # print(x.shape)
         x = self.proj(x)
         # x = self.head_drop(x)
         return x
@@ -47,15 +45,15 @@ class BERTForPretraining(nn.Module):
         )
 
         self.nsp_head = NSPHead(hidden_size=self.bert.hidden_size)
-        # self.mlm_head = MLMHead(
-        #     vocab_size=self.bert.vocab_size, hidden_size=self.bert.hidden_size,
-        # )
+        self.mlm_head = MLMHead(
+            vocab_size=self.bert.vocab_size, hidden_size=self.bert.hidden_size,
+        )
 
     def forward(self, token_ids, seg_ids):
         # print(token_ids)
         # print(seg_ids)
         x = self.bert(token_ids=token_ids, seg_ids=seg_ids)
         pred_is_next = self.nsp_head(x)
-        # pred_token_ids = self.mlm_head(x)
-        # return pred_is_next, pred_token_ids
-        return pred_is_next
+        pred_token_ids = self.mlm_head(x)
+        return pred_is_next, pred_token_ids
+

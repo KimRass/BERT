@@ -64,11 +64,8 @@ class BookCorpusDataset(Dataset):
         else:
             latter_idx = random.randrange(len(self.parags))
             is_next = 0
-        # print(idx, latter_idx, is_next)
-        # latter_parag = self.parags[latter_idx]
         latter_token_ids = self.ls_token_ids[latter_idx]
         return latter_token_ids, torch.as_tensor(is_next)
-        # return latter_parag, torch.as_tensor(is_next)
 
     def _token_ids_to_segment_ids(self, token_ids):
         seg_ids = torch.zeros_like(token_ids, dtype=token_ids.dtype, device=token_ids.device)
@@ -79,14 +76,9 @@ class BookCorpusDataset(Dataset):
         return seg_ids
 
     def __len__(self):
-        # return len(self.parags) - 1
         return len(self.ls_token_ids) - 1
 
     def __getitem__(self, idx):
-        # former_parag = self.parags[idx]
-        # former_token_ids = self.tokenizer.encode(former_parag).ids[1: -1]
-        # latter_parag, is_next = self._sample_latter_sentence(idx)
-        # latter_token_ids = self.tokenizer.encode(latter_parag).ids[1: -1]
         former_token_ids = self.ls_token_ids[idx]
         latter_token_ids, is_next = self._sample_latter_sentence(idx)
 

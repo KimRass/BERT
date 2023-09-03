@@ -71,8 +71,6 @@ class MultiHeadAttention(nn.Module):
         if mask is not None:
             attn_score.masked_fill_(mask=mask, value=-1e9)
         attn_weight = F.softmax(attn_score, dim=3)
-        # print(attn_weight)
-        # print(attn_weight.sum(dim=3))
         x = torch.einsum("bhnm,bhmd->bhnd", attn_weight, v)
         x = rearrange(x, pattern="b h n d -> b n (h d)")
         x = self.attn_drop(x)
@@ -84,8 +82,8 @@ class PositionwiseFeedForward(nn.Module):
     def __init__(self, hidden_size, mlp_size, drop_prob=0.1):
         super().__init__()
 
-        self.proj1 = nn.Linear(hidden_size, mlp_size) # "$W_{1}$"
-        self.proj2 = nn.Linear(mlp_size, hidden_size) # "$W_{2}$"
+        self.proj1 = nn.Linear(hidden_size, mlp_size)
+        self.proj2 = nn.Linear(mlp_size, hidden_size)
         self.mlp_drop2 = nn.Dropout(drop_prob)
         self.mlp_drop1 = nn.Dropout(drop_prob)
 
@@ -185,8 +183,6 @@ class BERT(nn.Module):
         return mask
 
     def forward(self, token_ids, seg_ids):
-        # print(token_ids)
-        # print(seg_ids)
         b, seq_len = token_ids.shape
         pos = torch.arange(
             seq_len, dtype=torch.long, device=token_ids.device
