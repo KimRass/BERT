@@ -24,7 +24,7 @@ class BookCorpusDataset(Dataset):
         epubtxt_dir,
         tokenizer,
         seq_len,
-        chunk_size=2 ** 14,
+        chunk_size=2 ** 8,
     ):
         self.epubtxt_dir = epubtxt_dir
         self.tokenizer = tokenizer
@@ -42,6 +42,9 @@ class BookCorpusDataset(Dataset):
     def _tokenize(self):
         print("Tokenizing BookCorpus...")
         self.ls_token_ids = list()
+        # for line in self.lines:
+        #     encoded = self.tokenizer.encode_batch(line)
+        #     self.ls_token_ids.extend([i.ids for i in encoded])
         for idx in tqdm(range(0, len(self.lines), self.chunk_size)):
             encoded = self.tokenizer.encode_batch(self.lines[idx: idx + self.chunk_size])
             self.ls_token_ids.extend([i.ids for i in encoded])
