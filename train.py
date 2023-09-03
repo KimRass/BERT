@@ -9,14 +9,14 @@ from time import time
 import config
 from pretrain.wordpiece import load_bert_tokenizer
 from pretrain.bookcorpus import BookCorpusForBERT
-from model import BERTForPretraining, BERT, NSPHead
+from pretrain.model import BERTForPretraining
 from pretrain.masked_language_model import MaskedLanguageModel
 from pretrain.loss import LossForPretraining
 from utils import get_args, get_elapsed_time
 from pretrain.evalute import get_nsp_acc, get_mlm_acc
 
 # torch.set_printoptions(sci_mode=False)
-torch.set_printoptions(linewidth=180)
+# torch.set_printoptions(linewidth=180)
 
 
 def save_checkpoint(step, model, optim, ckpt_path):
