@@ -9,7 +9,7 @@ from time import time
 import config
 from pretrain.wordpiece import load_bert_tokenizer
 from pretrain.bookcorpus import BookCorpusForBERT
-from model import BERTForPretraining
+from model import BERTForPretraining, BERT, NSPHead
 from pretrain.masked_language_model import MaskedLanguageModel
 from pretrain.loss import LossForPretraining
 from utils import get_args, get_elapsed_time
