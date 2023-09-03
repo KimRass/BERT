@@ -12,28 +12,14 @@ from utils import print_number_of_parameters
 
 class TokenEmbedding(nn.Embedding):
     def __init__(self, vocab_size, hidden_size, pad_id):
-        super().__init__(num_embeddings=vocab_size, embedding_dim=hidden_size, padding_idx=pad_id)
+        super().__init__(
+            num_embeddings=vocab_size, embedding_dim=hidden_size, padding_idx=pad_id,
+        )
 
 
-class PositionEmbedding(nn.Module):
-    def __init__(self, hidden_size, max_len=2048) -> None:
-        super().__init__()
-
-        pos = torch.arange(max_len).unsqueeze(1) # "$pos$"
-        i = torch.arange(hidden_size // 2).unsqueeze(0) # "$i$"
-         # "$\sin(\text{pos} / 10000^{2 * i  / d_{\text{model}}})$"
-        angle = pos / (10_000 ** (2 * i / hidden_size))
-
-        self.pe_mat = torch.zeros(size=(max_len, hidden_size))
-        self.pe_mat[:, 0:: 2] = torch.sin(angle) # "$text{PE}_(\text{pos}, 2i)$"
-        self.pe_mat[:, 1:: 2] = torch.cos(angle) # "$text{PE}_(\text{pos}, 2i + 1)$"
-
-        self.register_buffer("pos_enc_mat", self.pe_mat)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        _, l, _ = x.shape
-        x += self.pe_mat.unsqueeze(0)[:, : l, :].to(x.device)
-        return x
+class PositionEmbedding(nn.Embedding):
+    def __init__(self, max_len, hidden_size):
+        super().__init__(num_embeddings=max_len, embedding_dim=hidden_size)
 
 
 class SegmentEmbedding(nn.Embedding):
@@ -163,6 +149,7 @@ class BERT(nn.Module):
     def __init__(
         self,
         vocab_size,
+        max_len,
         pad_id,
         n_layers=12,
         n_heads=12,
@@ -175,13 +162,14 @@ class BERT(nn.Module):
         super().__init__()
 
         self.vocab_size = vocab_size
+        self.max_len = max_len
         self.hidden_size = hidden_size
         self.pad_id = pad_id
 
         self.token_embed = TokenEmbedding(
             vocab_size=vocab_size, hidden_size=hidden_size, pad_id=pad_id,
         )
-        self.pos_embed = PositionEmbedding(hidden_size=hidden_size)
+        self.pos_embed = PositionEmbedding(max_len=max_len, hidden_size=hidden_size)
         self.seg_embed = SegmentEmbedding(hidden_size)
 
         self.enmbed_drop = nn.Dropout(embed_drop_prob)
@@ -196,8 +184,10 @@ class BERT(nn.Module):
         )
 
     def forward(self, token_ids, seg_ids):
+        b, l = token_ids.shape
+        pos = torch.arange(l).unsqueeze(0).repeat(b, 1)
         x = self.token_embed(token_ids)
-        x = self.pos_embed(x)
+        x += self.pos_embed(pos)
         x += self.seg_embed(seg_ids)
         # print(seg_ids[0])
         # print(self.seg_embed(seg_ids)[0])
@@ -269,11 +259,12 @@ class NSPHead(nn.Module):
 
 
 class BERTForPretraining(nn.Module):
-    def __init__(self, vocab_size, pad_id, n_layers, n_heads, hidden_size, mlp_size):
+    def __init__(self, vocab_size, max_len, pad_id, n_layers, n_heads, hidden_size, mlp_size):
         super().__init__()
 
         self.bert = BERT(
             vocab_size=vocab_size,
+            max_len=max_len,
             pad_id=pad_id,
             n_layers=n_layers,
             n_heads=n_heads,

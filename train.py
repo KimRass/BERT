@@ -42,16 +42,17 @@ if __name__ == "__main__":
     # over the 3.3 billion word corpus." (Comment: 256 * 512 * 1,000,000 / 3,300,000,000
     # = 39.7)
     # 학습이 너무 오래 걸리므로 절반 만큼만 학습하겠습니다.
-    N_STEPS = (256 * 512 * 500_000) // (args.batch_size * config.MAX_LEN)
+    N_STEPS = (256 * 512 * 500_000) // (args.batch_size * config.SEQ_LEN)
     print(f"""N_WORKERS = {config.N_WORKERS}""")
     print(f"""MAX_LEN = {config.MAX_LEN}""")
+    print(f"""SEQ_LEN = {config.SEQ_LEN}""")
     print(f"""N_STEPS = {N_STEPS:,}""", end="\n\n")
 
     tokenizer = load_bert_tokenizer(config.VOCAB_PATH)
     ds = BookCorpusForBERT(
         epubtxt_dir=args.epubtxt_dir,
         tokenizer=tokenizer,
-        max_len=config.MAX_LEN,
+        max_len=config.SEQ_LEN,
     )
     dl = DataLoader(
         ds,
@@ -65,6 +66,7 @@ if __name__ == "__main__":
 
     model = BERTForPretraining( # Smaller than BERT-Base
         vocab_size=config.VOCAB_SIZE,
+        max_len=config.MAX_LEN,
         pad_id=ds.pad_id,
         n_layers=config.N_LAYERS,
         n_heads=config.N_HEADS,
@@ -124,6 +126,7 @@ if __name__ == "__main__":
         gt_token_ids = gt_token_ids.to(config.DEVICE)
         seg_ids = seg_ids.to(config.DEVICE)
         gt_is_next = gt_is_next.to(config.DEVICE)
+        # print(seg_ids)
 
         masked_token_ids = mlm(gt_token_ids)
         # print(gt_token_ids[0, : 10])

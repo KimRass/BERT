@@ -7,7 +7,11 @@ from pathlib import Path
 
 ### Data
 VOCAB_SIZE = 30_522 // 2 # 학습이 너무 오래 걸리므로 절반으로 줄이겠습니다.
+# "To speed up pretraing in our experiments, we pre-train the model
+# with sequence length of 128 for 90% of the steps. Then, we train
+# the rest 10% of the steps of sequence of 512 to learn the positional embeddings."
 MAX_LEN = 512
+SEQ_LEN = 128
 ### BookCorpus
 VOCAB_PATH = Path(__file__).parent/"pretrain/bookcorpus_vocab.json"
 MIN_FREQ = 5
