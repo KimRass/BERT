@@ -24,11 +24,13 @@ class BookCorpusDataset(Dataset):
         epubtxt_dir,
         tokenizer,
         seq_len,
-        chunk_size=2 ** 8,
+        tokenize_in_advance=False,
+        chunk_size=2 ** 6,
     ):
         self.epubtxt_dir = epubtxt_dir
         self.tokenizer = tokenizer
         self.seq_len = seq_len
+        self.tokenize_in_advance = tokenize_in_advance
         self.chunk_size = chunk_size
 
         self.cls_id = tokenizer.token_to_id("[CLS]")
@@ -37,14 +39,12 @@ class BookCorpusDataset(Dataset):
         self.unk_id = tokenizer.token_to_id("[UNK]")
 
         self.lines = parse(epubtxt_dir)
-        self._tokenize()
+        if tokenize_in_advance:
+            self._tokenize()
 
     def _tokenize(self):
         print("Tokenizing BookCorpus...")
         self.ls_token_ids = list()
-        # for line in self.lines:
-        #     encoded = self.tokenizer.encode_batch(line)
-        #     self.ls_token_ids.extend([i.ids for i in encoded])
         for idx in tqdm(range(0, len(self.lines), self.chunk_size)):
             encoded = self.tokenizer.encode_batch(self.lines[idx: idx + self.chunk_size])
             self.ls_token_ids.extend([i.ids for i in encoded])
@@ -78,11 +78,20 @@ class BookCorpusDataset(Dataset):
         return seg_ids
 
     def __len__(self):
-        return len(self.ls_token_ids) - 1
+        if self.tokenize_in_advance:
+            return len(self.ls_token_ids) - 1
+        else:
+            return len(self.lines) - 1
 
     def __getitem__(self, idx):
-        former_token_ids = self.ls_token_ids[idx]
-        latter_token_ids, is_next = self._sample_latter_sentence(idx)
+        if self.tokenize_in_advance:
+            former_token_ids = self.ls_token_ids[idx]
+            latter_token_ids, is_next = self._sample_latter_sentence(idx)
+        else:
+            former_line = self.lines[idx]
+            former_token_ids = self.tokenizer.encode(former_line).ids[1: -1]
+            latter_line, is_next = self._sample_latter_sentence(idx)
+            latter_token_ids = self.tokenizer.encode(latter_line).ids[1: -1]
 
         token_ids = self._to_bert_input(
             former_token_ids=former_token_ids, latter_token_ids=latter_token_ids,
