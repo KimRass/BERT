@@ -14,8 +14,16 @@ class LossForPretraining(nn.Module):
     def forward(self, pred_is_next, gt_is_next):
         # print(gt_is_next)
         nsp_loss = self.ce(pred_is_next, gt_is_next)
-        print(pred_is_next)
-        print(nsp_loss.item(), end="\n\n")
+        # print(pred_is_next)
+        # print(nsp_loss.item(), end="\n\n")
         # mlm_loss = self.ce(pred_token_ids.permute(0, 2, 1), gt_token_ids)
         # return nsp_loss, mlm_loss
         return nsp_loss
+
+if __name__ == "__main__":
+    import torch
+    pred = torch.Tensor([[1.2275, 0.8730]])
+    # pred = F.softmax(pred, dim=-1)
+    gt = torch.Tensor([1]).long()
+    # pred.shape, gt.shape
+    nn.CrossEntropyLoss(reduction="mean")(pred, gt)
