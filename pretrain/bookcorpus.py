@@ -46,12 +46,13 @@ class BookCorpusForBERT(Dataset):
         return torch.as_tensor(token_ids)
 
     def _sample_latter_sentence(self, idx):
-        if random.random() < 0.5:
+        # if random.random() < 0.5:
+        if random.random() < 0.1:
             latter_idx = idx + 1
-            is_next = 0
+            is_next = 1
         else:
             latter_idx = random.randrange(len(self.parags))
-            is_next = 1
+            is_next = 0
         # print(idx, latter_idx, is_next)
         latter_parag = self.parags[latter_idx]
         return latter_parag, torch.as_tensor(is_next)
