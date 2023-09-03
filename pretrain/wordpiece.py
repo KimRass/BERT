@@ -70,5 +70,5 @@ if __name__ == "__main__":
             vocab_path=config.VOCAB_PATH,
             min_freq=config.MIN_FREQ,
             limit_alphabet=config.LIM_ALPHABET,
-            post_processor=True,
+            post_processor=False,
         )

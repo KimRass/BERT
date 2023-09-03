@@ -44,7 +44,7 @@ class BookCorpusDataset(Dataset):
         self.ls_token_ids = list()
         for idx in tqdm(range(0, len(self.lines), self.chunk_size)):
             encoded = self.tokenizer.encode_batch(self.lines[idx: idx + self.chunk_size])
-            self.ls_token_ids.extend([i.ids[1: -1] for i in encoded])
+            self.ls_token_ids.extend([i.ids for i in encoded])
         print("Completed")
 
     def _to_bert_input(self, former_token_ids, latter_token_ids):
