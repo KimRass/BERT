@@ -260,7 +260,9 @@ class NSPHead(nn.Module):
         self.head_drop = nn.Dropout(drop_prob)
 
     def forward(self, x):
+        # print(x.shape)
         x = x[:, 0, :]
+        # print(x[:, : 5])
         x = self.cls_proj(x)
         # x = self.head_drop(x)
         # x = F.log_softmax(x, dim=-1)
