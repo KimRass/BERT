@@ -92,9 +92,9 @@ class PositionwiseFeedForward(nn.Module):
         x = self.proj1(x)
         # "We use a gelu activation rather than the standard relu, following OpenAI GPT."
         x = F.gelu(x)
-        x = self.mlp_drop1(x)
+        # x = self.mlp_drop1(x)
         x = self.proj2(x)
-        x = self.mlp_drop2(x)
+        # x = self.mlp_drop2(x)
         return x
 
 
@@ -193,7 +193,7 @@ class BERT(nn.Module):
         x += self.seg_embed(seg_ids)
         # print(seg_ids[0])
         # print(self.seg_embed(seg_ids)[0])
-        x = self.embed_drop(x)
+        # x = self.embed_drop(x)
 
         pad_mask = _get_pad_mask(token_ids=token_ids, pad_id=self.pad_id)
         # print(token_ids[0, :])
@@ -242,7 +242,7 @@ class MLMHead(nn.Module):
 
     def forward(self, x):
         x = self.cls_proj(x)
-        x = self.head_drop(x)
+        # x = self.head_drop(x)
         return x
 
 
@@ -256,7 +256,7 @@ class NSPHead(nn.Module):
     def forward(self, x):
         x = x[:, 0, :]
         x = self.cls_proj(x)
-        x = self.head_drop(x)
+        # x = self.head_drop(x)
         return x
 
 
@@ -288,10 +288,10 @@ class BERTForPretraining(nn.Module):
 
 
 class BERTBaseForPretraining(nn.Module):
-    def __init__(self, vocab_size):
+    def __init__(self, vocab_size, max_len, pad_id):
         super().__init__()
 
-        self.bert = BERTBase(vocab_size=vocab_size)
+        self.bert = BERTBase(vocab_size=vocab_size, max_len=max_len, pad_id=pad_id)
 
         self.nsp_head = NSPHead(hidden_size=self.bert.hidden_size)
         self.mlm_head = MLMHead(

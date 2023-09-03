@@ -73,6 +73,7 @@ if __name__ == "__main__":
         hidden_size=config.HIDDEN_SIZE,
         mlp_size=config.MLP_SIZE,
     ).to(config.DEVICE)
+    print(model)
     if config.N_GPUS > 1:
         model = nn.DataParallel(model)
     no_mask_token_ids = [ds.cls_id, ds.sep_id, ds.pad_id, ds.unk_id]
