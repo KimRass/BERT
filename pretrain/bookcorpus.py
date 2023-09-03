@@ -23,11 +23,11 @@ class BookCorpusForBERT(Dataset):
         self,
         epubtxt_dir,
         tokenizer,
-        max_len,
+        seq_len,
     ):
         self.epubtxt_dir = epubtxt_dir
         self.tokenizer = tokenizer
-        self.max_len = max_len
+        self.seq_len = seq_len
 
         self.cls_id = tokenizer.token_to_id("[CLS]")
         self.sep_id = tokenizer.token_to_id("[SEP]")
@@ -39,10 +39,10 @@ class BookCorpusForBERT(Dataset):
     def _to_bert_input(self, cur_token_ids, next_token_ids):
         ### Add '[CLS]' and '[SEP]' tokens.
         token_ids = (
-            [self.cls_id] + cur_token_ids[: self.max_len - 3] + [self.sep_id] + next_token_ids
-        )[: self.max_len - 1] + [self.sep_id]
+            [self.cls_id] + cur_token_ids[: self.seq_len - 3] + [self.sep_id] + next_token_ids
+        )[: self.seq_len - 1] + [self.sep_id]
         ### Pad.
-        token_ids += [self.pad_id] * (self.max_len - len(token_ids))
+        token_ids += [self.pad_id] * (self.seq_len - len(token_ids))
         return torch.as_tensor(token_ids)
 
     def _sample_next_sentence(self, idx):
