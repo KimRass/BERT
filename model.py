@@ -263,7 +263,8 @@ class NSPHead(nn.Module):
         x = x[:, 0, :]
         x = self.cls_proj(x)
         # x = self.head_drop(x)
-        x = F.log_softmax(x, dim=-1)
+        # x = F.log_softmax(x, dim=-1)
+        x = F.softmax(x, dim=-1)
         return x
 
 
