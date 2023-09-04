@@ -44,6 +44,7 @@ if __name__ == "__main__":
     print(f"""N_WORKERS = {config.N_WORKERS}""")
     print(f"""MAX_LEN = {config.MAX_LEN}""")
     print(f"""SEQ_LEN = {config.SEQ_LEN}""")
+    print(f"""TOKENIZE_IN_ADVANCE = {args.tokenize_in_advance}""")
 
     # "We train with batch size of 256 sequences (256 sequences * 512 tokens
     # = 128,000 tokens/batch) for 1,000,000 steps, which is approximately 40 epochs
