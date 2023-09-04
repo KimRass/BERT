@@ -125,7 +125,7 @@ if __name__ == "__main__":
     accum_nsp_acc = 0
     accum_mlm_acc = 0
     step_cnt = 0
-    for step in range(init_step + 1, N_STEPS + 1):
+    for step in tqdm(range(init_step + 1, N_STEPS + 1)):
         try:
             gt_token_ids, seg_ids, gt_is_next = next(di)
         except StopIteration:
