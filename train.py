@@ -106,7 +106,6 @@ if __name__ == "__main__":
     ### Resume
     if args.ckpt_path is not None:
         ckpt = torch.load(args.ckpt_path, map_location=config.DEVICE)
-        torch.load("/Users/jongbeomkim/Downloads/bert_checkpoints/bookcorpus_step_40612.pth", map_location="cpu")
         if config.N_GPUS > 1:
             model.module.load_state_dict(ckpt["model"])
         else:
