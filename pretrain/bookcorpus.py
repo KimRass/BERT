@@ -12,6 +12,7 @@ import torch
 from torch.utils.data import Dataset
 import random
 from tqdm.auto import tqdm
+from typing import Literal
 import pysbd
 
 from pretrain.wordpiece import parse
