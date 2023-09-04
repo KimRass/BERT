@@ -24,7 +24,7 @@ def parse(epubtxt_dir):
         with open(doc_path, mode="r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
-                if (not line) or (re.search(pattern=REGEX, string=line)):
+                if (not line) or (re.search(pattern=REGEX, string=line)) or (line.count(" ") < 1):
                     continue
                 lines.append(line)
     print("Completed")
