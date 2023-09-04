@@ -10,7 +10,7 @@ from tqdm.auto import tqdm
 import config
 from utils import get_args, get_elapsed_time
 from pretrain.wordpiece import load_bert_tokenizer, load_fast_bert_tokenizer
-from pretrain.bookcorpus import BookCorpusDataset
+from pretrain.bookcorpus import BookCorpusForBERT
 from pretrain.model import BERTForPretraining
 from pretrain.masked_language_model import MaskedLanguageModel
 from pretrain.loss import LossForPretraining
@@ -57,7 +57,7 @@ if __name__ == "__main__":
 
     tokenizer = load_bert_tokenizer(config.VOCAB_PATH)
     # tokenizer = load_fast_bert_tokenizer(vocab_dir=config.VOCAB_DIR)
-    ds = BookCorpusDataset(
+    ds = BookCorpusForBERT(
         epubtxt_dir=args.epubtxt_dir,
         tokenizer=tokenizer,
         seq_len=config.SEQ_LEN,
