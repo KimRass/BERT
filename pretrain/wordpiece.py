@@ -1,6 +1,7 @@
 # References
     # https://huggingface.co/docs/tokenizers/pipeline
 
+from transformers import AutoTokenizer, BertTokenizerFast
 from tokenizers import Tokenizer, normalizers
 from tokenizers.models import WordPiece
 from tokenizers.normalizers import NFD, Lowercase, StripAccents
@@ -31,7 +32,7 @@ def parse(epubtxt_dir):
 
 
 def train_bert_tokenizer(
-    corpus, vocab_size, vocab_path, min_freq, limit_alphabet, post_processor=False
+    corpus, vocab_size, vocab_path, min_freq, limit_alphabet, post_processor=False,
 ):
     tokenizer = Tokenizer(WordPiece(unk_token="[UNK]"))
     tokenizer.normalizer = normalizers.Sequence([NFD(), Lowercase(), StripAccents()])
@@ -54,8 +55,19 @@ def train_bert_tokenizer(
     tokenizer.save(str(vocab_path))
 
 
+def train_fast_bert_tokenizer(corpus, vocab_size, vocab_dir):
+    tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+    tokenizer = tokenizer.train_new_from_iterator(corpus, vocab_size=vocab_size, length=len(corpus))
+    tokenizer.save_pretrained(vocab_dir)
+
+
 def load_bert_tokenizer(vocab_path):
     tokenizer = Tokenizer.from_file(str(vocab_path))
+    return tokenizer
+
+
+def load_fast_bert_tokenizer(vocab_dir):
+    tokenizer = AutoTokenizer.from_pretrained(vocab_dir)
     return tokenizer
 
 
@@ -63,12 +75,15 @@ if __name__ == "__main__":
     args = get_args()
 
     corpus = parse(args.epubtxt_dir)
-    if not Path(config.VOCAB_PATH).exists():
-        train_bert_tokenizer(
-            corpus=corpus,
-            vocab_size=config.VOCAB_SIZE,
-            vocab_path=config.VOCAB_PATH,
-            min_freq=config.MIN_FREQ,
-            limit_alphabet=config.LIM_ALPHABET,
-            post_processor=False,
-        )
+    # if not Path(config.VOCAB_PATH).exists():
+    #     train_bert_tokenizer(
+    #         corpus=corpus,
+    #         vocab_size=config.VOCAB_SIZE,
+    #         vocab_path=config.VOCAB_PATH,
+    #         min_freq=config.MIN_FREQ,
+    #         limit_alphabet=config.LIM_ALPHABET,
+    #         post_processor=False,
+    #     )
+    vocab_dir = "/Users/jongbeomkim/Desktop/workspace/bert_from_scratch/pretrain/bookcorpus_vocab"
+    if not Path(vocab_dir).exists():
+        train_fast_bert_tokenizer(corpus=corpus, vocab_size=config.VOCAB_SIZE, vocab_dir=vocab_dir)

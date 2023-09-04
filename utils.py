@@ -17,6 +17,7 @@ def get_args():
         "--epubtxt_dir", type=str, required=False, default="../bookcurpus/epubtxt",
     )
     parser.add_argument("--batch_size", type=int, required=False, default=256)
+    parser.add_argument("--tokenize_in_advance", type=bool, required=True)
 
     args = parser.parse_args()
     return args

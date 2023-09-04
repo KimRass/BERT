@@ -14,6 +14,7 @@ MAX_LEN = 512
 SEQ_LEN = 128
 ### BookCorpus
 VOCAB_PATH = Path(__file__).parent/"pretrain/bookcorpus_vocab.json"
+# VOCAB_DIR = Path(__file__).parent/"pretrain/bookcorpus_vocab"
 MIN_FREQ = 5
 LIM_ALPHABET = 100
 
@@ -49,4 +50,5 @@ MASK_PROB = 0.8
 RANDOMIZE_PROB = 0.1
 
 ### Resume
+# CKPT_PATH = CKPT_DIR/"bookcorpus_step_step_40612.pth"
 CKPT_PATH = None

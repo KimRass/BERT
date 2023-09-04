@@ -7,12 +7,12 @@ from pathlib import Path
 from time import time
 
 import config
-from pretrain.wordpiece import load_bert_tokenizer
+from utils import get_args, get_elapsed_time
+from pretrain.wordpiece import load_bert_tokenizer, load_fast_bert_tokenizer
 from pretrain.bookcorpus import BookCorpusDataset
 from pretrain.model import BERTForPretraining
 from pretrain.masked_language_model import MaskedLanguageModel
 from pretrain.loss import LossForPretraining
-from utils import get_args, get_elapsed_time
 from pretrain.evalute import get_nsp_acc, get_mlm_acc
 
 # torch.set_printoptions(sci_mode=False)
@@ -54,10 +54,12 @@ if __name__ == "__main__":
     print(f"""N_STEPS = {N_STEPS:,}""", end="\n\n")
 
     tokenizer = load_bert_tokenizer(config.VOCAB_PATH)
+    # tokenizer = load_fast_bert_tokenizer(vocab_dir=config.VOCAB_DIR)
     ds = BookCorpusDataset(
         epubtxt_dir=args.epubtxt_dir,
         tokenizer=tokenizer,
         seq_len=config.SEQ_LEN,
+        tokenize_in_advance=args.tokenize_in_advance,
     )
     dl = DataLoader(
         ds,
@@ -84,6 +86,7 @@ if __name__ == "__main__":
     mlm = MaskedLanguageModel(
         vocab_size=config.VOCAB_SIZE,
         mask_id=tokenizer.token_to_id("[MASK]"),
+        # mask_id=tokenizer.mask_token_id,
         no_mask_token_ids=no_mask_token_ids,
         select_prob=config.SELECT_PROB,
         mask_prob=config.MASK_PROB,

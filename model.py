@@ -38,7 +38,6 @@ class ResidualConnection(nn.Module):
         skip = x.clone()
         x = self.norm(x)
         x = sublayer(x)
-        # x = self.resid_drop(x)
         x += skip
         return x
 
@@ -91,9 +90,9 @@ class PositionwiseFeedForward(nn.Module):
         x = self.proj1(x)
         # "We use a gelu activation rather than the standard relu, following OpenAI GPT."
         x = F.gelu(x)
-        # x = self.mlp_drop1(x)
+        x = self.mlp_drop1(x)
         x = self.proj2(x)
-        # x = self.mlp_drop2(x)
+        x = self.mlp_drop2(x)
         return x
 
 
@@ -190,7 +189,7 @@ class BERT(nn.Module):
         x = self.token_embed(token_ids)
         x += self.pos_embed(pos)
         x += self.seg_embed(seg_ids)
-        # x = self.embed_drop(x)
+        x = self.embed_drop(x)
 
         pad_mask = self._get_pad_mask(token_ids)
         x = self.tf_block(x, mask=pad_mask)

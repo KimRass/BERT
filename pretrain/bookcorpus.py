@@ -25,7 +25,7 @@ class BookCorpusDataset(Dataset):
         tokenizer,
         seq_len,
         tokenize_in_advance=False,
-        chunk_size=2 ** 6,
+        chunk_size=2 ** 4,
     ):
         self.epubtxt_dir = epubtxt_dir
         self.tokenizer = tokenizer
@@ -37,6 +37,10 @@ class BookCorpusDataset(Dataset):
         self.sep_id = tokenizer.token_to_id("[SEP]")
         self.pad_id = tokenizer.token_to_id("[PAD]")
         self.unk_id = tokenizer.token_to_id("[UNK]")
+        # self.cls_id = tokenizer.cls_token_id
+        # self.sep_id = tokenizer.sep_token_id
+        # self.pad_id = tokenizer.pad_token_id
+        # self.unk_id = tokenizer.unk_token_id
 
         self.lines = parse(epubtxt_dir)
         if tokenize_in_advance:
@@ -44,10 +48,12 @@ class BookCorpusDataset(Dataset):
 
     def _tokenize(self):
         print("Tokenizing BookCorpus...")
-        self.ls_token_ids = list()
+        self.token_ids_ls = list()
         for idx in tqdm(range(0, len(self.lines), self.chunk_size)):
-            encoded = self.tokenizer.encode_batch(self.lines[idx: idx + self.chunk_size])
-            self.ls_token_ids.extend([i.ids for i in encoded])
+            encoding = self.tokenizer(self.lines[idx: idx + self.chunk_size])
+            self.token_ids_ls.extend([i[1: -1] for i in encoding["input_ids"]])
+    #         encoded = self.tokenizer.encode_batch(self.lines[idx: idx + self.chunk_size])
+    #         self.token_ids_ls.extend([i.ids for i in encoded])
         print("Completed")
 
     def _to_bert_input(self, former_token_ids, latter_token_ids):
@@ -67,7 +73,7 @@ class BookCorpusDataset(Dataset):
             latter_idx = random.randrange(len(self.lines))
             is_next = 0
         if self.tokenize_in_advance:
-            latter_token_ids = self.ls_token_ids[latter_idx]
+            latter_token_ids = self.token_ids_ls[latter_idx]
             return latter_token_ids, torch.as_tensor(is_next)
         else:
             latter_line = self.lines[latter_idx]
@@ -83,13 +89,13 @@ class BookCorpusDataset(Dataset):
 
     def __len__(self):
         if self.tokenize_in_advance:
-            return len(self.ls_token_ids) - 1
+            return len(self.token_ids_ls) - 1
         else:
             return len(self.lines) - 1
 
     def __getitem__(self, idx):
         if self.tokenize_in_advance:
-            former_token_ids = self.ls_token_ids[idx]
+            former_token_ids = self.token_ids_ls[idx]
             latter_token_ids, is_next = self._sample_latter_sentence(idx)
         else:
             former_line = self.lines[idx]
