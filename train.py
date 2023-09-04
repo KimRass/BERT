@@ -84,12 +84,11 @@ if __name__ == "__main__":
     ).to(config.DEVICE)
     if config.N_GPUS > 1:
         model = nn.DataParallel(model)
-    no_mask_token_ids = [ds.cls_id, ds.sep_id, ds.pad_id, ds.unk_id]
+
     mlm = MaskedLanguageModel(
         vocab_size=config.VOCAB_SIZE,
         mask_id=tokenizer.token_to_id("[MASK]"),
-        # mask_id=tokenizer.mask_token_id,
-        no_mask_token_ids=no_mask_token_ids,
+        no_mask_token_ids=[ds.cls_id, ds.sep_id, ds.pad_id, ds.unk_id],
         select_prob=config.SELECT_PROB,
         mask_prob=config.MASK_PROB,
         randomize_prob=config.RANDOMIZE_PROB,
@@ -107,6 +106,7 @@ if __name__ == "__main__":
     ### Resume
     if config.CKPT_PATH is not None:
         ckpt = torch.load(config.CKPT_PATH, map_location=config.DEVICE)
+        torch.load("/Users/jongbeomkim/Downloads/bert_checkpoints/bookcorpus_step_40612.pth", map_location="cpu")
         if config.N_GPUS > 1:
             model.module.load_state_dict(ckpt["model"])
         else:
