@@ -50,5 +50,4 @@ MASK_PROB = 0.8
 RANDOMIZE_PROB = 0.1
 
 ### Resume
-# CKPT_PATH = CKPT_DIR/"bookcorpus_step_step_40612.pth"
-CKPT_PATH = None
+CKPT_PATH = CKPT_DIR/"bookcorpus_step_step_42174.pth"
