@@ -104,8 +104,8 @@ if __name__ == "__main__":
     crit = LossForPretraining()
 
     ### Resume
-    if config.CKPT_PATH is not None:
-        ckpt = torch.load(config.CKPT_PATH, map_location=config.DEVICE)
+    if args.ckpt_path is not None:
+        ckpt = torch.load(args.ckpt_path, map_location=config.DEVICE)
         torch.load("/Users/jongbeomkim/Downloads/bert_checkpoints/bookcorpus_step_40612.pth", map_location="cpu")
         if config.N_GPUS > 1:
             model.module.load_state_dict(ckpt["model"])
@@ -113,8 +113,8 @@ if __name__ == "__main__":
             model.load_state_dict(ckpt["model"])
         optim.load_state_dict(ckpt["optimizer"])
         init_step = ckpt["step"]
-        prev_ckpt_path = config.CKPT_PATH
-        print(f"""Resuming from checkpoint\n    '{config.CKPT_PATH}'...""")
+        prev_ckpt_path = args.ckpt_path
+        print(f"""Resuming from checkpoint\n    '{args.ckpt_path}'...""")
     else:
         init_step = 0
         prev_ckpt_path = ".pth"

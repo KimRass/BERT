@@ -48,6 +48,3 @@ N_CKPT_SAMPLES = 400_000
 SELECT_PROB = 0.15
 MASK_PROB = 0.8
 RANDOMIZE_PROB = 0.1
-
-### Resume
-CKPT_PATH = CKPT_DIR/"bookcorpus_step_40612.pth"
