@@ -112,11 +112,11 @@ if __name__ == "__main__":
             model.load_state_dict(ckpt["model"])
         optim.load_state_dict(ckpt["optimizer"])
         init_step = ckpt["step"]
-        prev_ckpt_path = args.ckpt_path
+        prev_ckpt_path = Path(args.ckpt_path)
         print(f"""Resuming from checkpoint\n    '{args.ckpt_path}'...""")
     else:
         init_step = 0
-        prev_ckpt_path = ".pth"
+        prev_ckpt_path = Path(".pth")
 
     print("Training...")
     start_time = time()
@@ -176,6 +176,6 @@ if __name__ == "__main__":
 
             cur_ckpt_path = config.CKPT_DIR/f"""bookcorpus_step_{step}.pth"""
             save_checkpoint(step=step, model=model, optim=optim, ckpt_path=cur_ckpt_path)
-            if Path(prev_ckpt_path).exists():
+            if prev_ckpt_path.exists():
                 prev_ckpt_path.unlink()
             prev_ckpt_path = cur_ckpt_path
