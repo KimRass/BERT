@@ -5,6 +5,7 @@ from torch.optim import Adam
 import gc
 from pathlib import Path
 from time import time
+from tqdm.auto import tqdm
 
 import config
 from utils import get_args, get_elapsed_time
