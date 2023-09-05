@@ -126,52 +126,53 @@ if __name__ == "__main__":
     step_cnt = 0
     while True:
         for gt_token_ids, seg_ids, gt_is_next in train_dl:
-            step +=1 
+            if step < N_STEPS:
+                step +=1
 
-            gt_token_ids = gt_token_ids.to(config.DEVICE)
-            seg_ids = seg_ids.to(config.DEVICE)
-            gt_is_next = gt_is_next.to(config.DEVICE)
+                gt_token_ids = gt_token_ids.to(config.DEVICE)
+                seg_ids = seg_ids.to(config.DEVICE)
+                gt_is_next = gt_is_next.to(config.DEVICE)
 
-            masked_token_ids = mlm(gt_token_ids)
+                masked_token_ids = mlm(gt_token_ids)
 
-            pred_is_next, pred_token_ids = model(token_ids=masked_token_ids, seg_ids=seg_ids)
-            nsp_loss, mlm_loss = crit(
-                pred_is_next=pred_is_next,
-                gt_is_next=gt_is_next,
-                pred_token_ids=pred_token_ids,
-                gt_token_ids=gt_token_ids,
-            )
-            loss = nsp_loss + mlm_loss
+                pred_is_next, pred_token_ids = model(token_ids=masked_token_ids, seg_ids=seg_ids)
+                nsp_loss, mlm_loss = crit(
+                    pred_is_next=pred_is_next,
+                    gt_is_next=gt_is_next,
+                    pred_token_ids=pred_token_ids,
+                    gt_token_ids=gt_token_ids,
+                )
+                loss = nsp_loss + mlm_loss
 
-            optim.zero_grad()
-            loss.backward()
-            optim.step()
+                optim.zero_grad()
+                loss.backward()
+                optim.step()
 
-            accum_nsp_loss += nsp_loss.item()
-            accum_mlm_loss += mlm_loss.item()
+                accum_nsp_loss += nsp_loss.item()
+                accum_mlm_loss += mlm_loss.item()
 
-            nsp_acc = get_nsp_acc(pred_is_next=pred_is_next, gt_is_next=gt_is_next)
-            mlm_acc = get_mlm_acc(pred_token_ids=pred_token_ids, gt_token_ids=gt_token_ids)
-            accum_nsp_acc += nsp_acc
-            accum_mlm_acc += mlm_acc
-            step_cnt += 1
+                nsp_acc = get_nsp_acc(pred_is_next=pred_is_next, gt_is_next=gt_is_next)
+                mlm_acc = get_mlm_acc(pred_token_ids=pred_token_ids, gt_token_ids=gt_token_ids)
+                accum_nsp_acc += nsp_acc
+                accum_mlm_acc += mlm_acc
+                step_cnt += 1
 
-            if (step % (config.N_CKPT_SAMPLES // args.batch_size) == 0) or (step == N_STEPS):
-                print(f"""[ {step:,}/{N_STEPS:,} ][ {get_elapsed_time(start_time)} ]""", end="")
-                print(f"""[ NSP loss: {accum_nsp_loss / step_cnt:.4f} ]""", end="")
-                print(f"""[ NSP acc: {accum_nsp_acc / step_cnt:.3f} ]""", end="")
-                print(f"""[ MLM loss: {accum_mlm_loss / step_cnt:.4f} ]""", end="")
-                print(f"""[ MLM acc: {accum_mlm_acc / step_cnt:.3f} ]""")
+                if (step % (config.N_CKPT_SAMPLES // args.batch_size) == 0) or (step == N_STEPS):
+                    print(f"""[ {step:,}/{N_STEPS:,} ][ {get_elapsed_time(start_time)} ]""", end="")
+                    print(f"""[ NSP loss: {accum_nsp_loss / step_cnt:.4f} ]""", end="")
+                    print(f"""[ NSP acc: {accum_nsp_acc / step_cnt:.3f} ]""", end="")
+                    print(f"""[ MLM loss: {accum_mlm_loss / step_cnt:.4f} ]""", end="")
+                    print(f"""[ MLM acc: {accum_mlm_acc / step_cnt:.3f} ]""")
 
-                start_time = time()
-                accum_nsp_loss = 0
-                accum_mlm_loss = 0
-                accum_nsp_acc = 0
-                accum_mlm_acc = 0
-                step_cnt = 0
+                    start_time = time()
+                    accum_nsp_loss = 0
+                    accum_mlm_loss = 0
+                    accum_nsp_acc = 0
+                    accum_mlm_acc = 0
+                    step_cnt = 0
 
-                cur_ckpt_path = config.CKPT_DIR/f"""bookcorpus_step_{step}.pth"""
-                save_checkpoint(step=step, model=model, optim=optim, ckpt_path=cur_ckpt_path)
-                if prev_ckpt_path.exists():
-                    prev_ckpt_path.unlink()
-                prev_ckpt_path = cur_ckpt_path
+                    cur_ckpt_path = config.CKPT_DIR/f"""bookcorpus_step_{step}.pth"""
+                    save_checkpoint(step=step, model=model, optim=optim, ckpt_path=cur_ckpt_path)
+                    if prev_ckpt_path.exists():
+                        prev_ckpt_path.unlink()
+                    prev_ckpt_path = cur_ckpt_path
