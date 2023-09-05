@@ -57,26 +57,25 @@ if __name__ == "__main__":
 
     tokenizer = load_bert_tokenizer(config.VOCAB_PATH)
     # tokenizer = load_fast_bert_tokenizer(vocab_dir=config.VOCAB_DIR)
-    ds = BookCorpusForBERT(
+    train_ds = BookCorpusForBERT(
         epubtxt_dir=args.epubtxt_dir,
         tokenizer=tokenizer,
         seq_len=config.SEQ_LEN,
         tokenize_in_advance=args.tokenize_in_advance,
     )
-    dl = DataLoader(
-        ds,
+    train_dl = DataLoader(
+        train_ds,
         batch_size=args.batch_size,
         shuffle=True,
         num_workers=config.N_WORKERS,
         pin_memory=True,
         drop_last=True,
     )
-    di = iter(dl)
 
     model = BERTForPretraining( # Smaller than BERT-Base
         vocab_size=config.VOCAB_SIZE,
         max_len=config.MAX_LEN,
-        pad_id=ds.pad_id,
+        pad_id=train_ds.pad_id,
         n_layers=config.N_LAYERS,
         n_heads=config.N_HEADS,
         hidden_size=config.HIDDEN_SIZE,
@@ -88,7 +87,7 @@ if __name__ == "__main__":
     mlm = MaskedLanguageModel(
         vocab_size=config.VOCAB_SIZE,
         mask_id=tokenizer.token_to_id("[MASK]"),
-        no_mask_token_ids=[ds.cls_id, ds.sep_id, ds.pad_id, ds.unk_id],
+        no_mask_token_ids=[train_ds.cls_id, train_ds.sep_id, train_ds.pad_id, train_ds.unk_id],
         select_prob=config.SELECT_PROB,
         mask_prob=config.MASK_PROB,
         randomize_prob=config.RANDOMIZE_PROB,
@@ -111,11 +110,11 @@ if __name__ == "__main__":
         else:
             model.load_state_dict(ckpt["model"])
         optim.load_state_dict(ckpt["optimizer"])
-        init_step = ckpt["step"]
+        step = ckpt["step"]
         prev_ckpt_path = Path(args.ckpt_path)
         print(f"""Resuming from checkpoint\n    '{args.ckpt_path}'...""")
     else:
-        init_step = 0
+        step = 0
         prev_ckpt_path = Path(".pth")
 
     print("Training...")
@@ -125,57 +124,54 @@ if __name__ == "__main__":
     accum_nsp_acc = 0
     accum_mlm_acc = 0
     step_cnt = 0
-    for step in range(init_step + 1, N_STEPS + 1):
-        try:
-            gt_token_ids, seg_ids, gt_is_next = next(di)
-        except StopIteration:
-            di = iter(dl)
-            gt_token_ids, seg_ids, gt_is_next = next(di)
+    while True:
+        for gt_token_ids, seg_ids, gt_is_next in train_dl:
+            step +=1 
 
-        gt_token_ids = gt_token_ids.to(config.DEVICE)
-        seg_ids = seg_ids.to(config.DEVICE)
-        gt_is_next = gt_is_next.to(config.DEVICE)
+            gt_token_ids = gt_token_ids.to(config.DEVICE)
+            seg_ids = seg_ids.to(config.DEVICE)
+            gt_is_next = gt_is_next.to(config.DEVICE)
 
-        masked_token_ids = mlm(gt_token_ids)
+            masked_token_ids = mlm(gt_token_ids)
 
-        pred_is_next, pred_token_ids = model(token_ids=masked_token_ids, seg_ids=seg_ids)
-        nsp_loss, mlm_loss = crit(
-            pred_is_next=pred_is_next,
-            gt_is_next=gt_is_next,
-            pred_token_ids=pred_token_ids,
-            gt_token_ids=gt_token_ids,
-        )
-        loss = nsp_loss + mlm_loss
+            pred_is_next, pred_token_ids = model(token_ids=masked_token_ids, seg_ids=seg_ids)
+            nsp_loss, mlm_loss = crit(
+                pred_is_next=pred_is_next,
+                gt_is_next=gt_is_next,
+                pred_token_ids=pred_token_ids,
+                gt_token_ids=gt_token_ids,
+            )
+            loss = nsp_loss + mlm_loss
 
-        optim.zero_grad()
-        loss.backward()
-        optim.step()
+            optim.zero_grad()
+            loss.backward()
+            optim.step()
 
-        accum_nsp_loss += nsp_loss.item()
-        accum_mlm_loss += mlm_loss.item()
+            accum_nsp_loss += nsp_loss.item()
+            accum_mlm_loss += mlm_loss.item()
 
-        nsp_acc = get_nsp_acc(pred_is_next=pred_is_next, gt_is_next=gt_is_next)
-        mlm_acc = get_mlm_acc(pred_token_ids=pred_token_ids, gt_token_ids=gt_token_ids)
-        accum_nsp_acc += nsp_acc
-        accum_mlm_acc += mlm_acc
-        step_cnt += 1
+            nsp_acc = get_nsp_acc(pred_is_next=pred_is_next, gt_is_next=gt_is_next)
+            mlm_acc = get_mlm_acc(pred_token_ids=pred_token_ids, gt_token_ids=gt_token_ids)
+            accum_nsp_acc += nsp_acc
+            accum_mlm_acc += mlm_acc
+            step_cnt += 1
 
-        if (step % (config.N_CKPT_SAMPLES // args.batch_size) == 0) or (step == N_STEPS):
-            print(f"""[ {step:,}/{N_STEPS:,} ][ {get_elapsed_time(start_time)} ]""", end="")
-            print(f"""[ NSP loss: {accum_nsp_loss / step_cnt:.4f} ]""", end="")
-            print(f"""[ NSP acc: {accum_nsp_acc / step_cnt:.3f} ]""", end="")
-            print(f"""[ MLM loss: {accum_mlm_loss / step_cnt:.4f} ]""", end="")
-            print(f"""[ MLM acc: {accum_mlm_acc / step_cnt:.3f} ]""")
+            if (step % (config.N_CKPT_SAMPLES // args.batch_size) == 0) or (step == N_STEPS):
+                print(f"""[ {step:,}/{N_STEPS:,} ][ {get_elapsed_time(start_time)} ]""", end="")
+                print(f"""[ NSP loss: {accum_nsp_loss / step_cnt:.4f} ]""", end="")
+                print(f"""[ NSP acc: {accum_nsp_acc / step_cnt:.3f} ]""", end="")
+                print(f"""[ MLM loss: {accum_mlm_loss / step_cnt:.4f} ]""", end="")
+                print(f"""[ MLM acc: {accum_mlm_acc / step_cnt:.3f} ]""")
 
-            start_time = time()
-            accum_nsp_loss = 0
-            accum_mlm_loss = 0
-            accum_nsp_acc = 0
-            accum_mlm_acc = 0
-            step_cnt = 0
+                start_time = time()
+                accum_nsp_loss = 0
+                accum_mlm_loss = 0
+                accum_nsp_acc = 0
+                accum_mlm_acc = 0
+                step_cnt = 0
 
-            cur_ckpt_path = config.CKPT_DIR/f"""bookcorpus_step_{step}.pth"""
-            save_checkpoint(step=step, model=model, optim=optim, ckpt_path=cur_ckpt_path)
-            if prev_ckpt_path.exists():
-                prev_ckpt_path.unlink()
-            prev_ckpt_path = cur_ckpt_path
+                cur_ckpt_path = config.CKPT_DIR/f"""bookcorpus_step_{step}.pth"""
+                save_checkpoint(step=step, model=model, optim=optim, ckpt_path=cur_ckpt_path)
+                if prev_ckpt_path.exists():
+                    prev_ckpt_path.unlink()
+                prev_ckpt_path = cur_ckpt_path
