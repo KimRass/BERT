@@ -19,14 +19,15 @@ from torch.utils.data import Dataset, DataLoader
 import pandas as pd
 from tqdm.auto import tqdm
 
+from pretrain.wordpiece import load_bert_tokenizer
+
+
 # "We construct four input sequences, each containing the concatenation of the given sentence (sentence A)
 # and a possible continuation (sentence B). The only task-specific parameters introduced is a vector
 # whose dot product with the [CLS] token representation $C$ denotes a score for each choice
 # which is normalized with a softmax layer."
 # We fine-tune the model for 3 epochs with a learning rate of 2e-5 and a batch size of 16.
 
-N_EPOCHS = 3
-LR = 2e-5
 
 class SWAGForBERT(Dataset):
     def __init__(self, csv_path, tokenizer, max_len):
@@ -82,10 +83,11 @@ class SWAGForBERT(Dataset):
         sample = self.data[idx]
         return torch.as_tensor(sample["token_indices"]), torch.as_tensor(sample["label"])
 
+
 if __name__ == "__main__":
     csv_path = "/Users/jongbeomkim/Documents/datasets/swag/train.csv"
-    vocab_path = "/Users/jongbeomkim/Desktop/workspace/transformer_based_models/bert/vocab_example.json"
-    tokenizer = prepare_bert_tokenizer(vocab_path=vocab_path)
+    vocab_path = "/Users/jongbeomkim/Desktop/workspace/bert_from_scratch/pretrain/bookcorpus_vocab.json"
+    tokenizer = load_bert_tokenizer(vocab_path)
     MAX_LEN = 512
     swag_ds = SWAGForBERT(csv_path=csv_path, tokenizer=tokenizer, max_len=MAX_LEN)
     BATCH_SIZE = 16
@@ -94,8 +96,5 @@ if __name__ == "__main__":
         token_ids.shape
         label.shape
 
-    VOCAB_SIZE = 30_522
-    model = BERTBase(vocab_size=VOCAB_SIZE)
-    token_ids.shape
-    token_ids[0].shape
-    model(token_ids[0]).shape
+        token_ids[0, 0, : 40]
+        token_ids[0, 1, : 40]

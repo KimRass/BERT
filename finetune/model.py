@@ -32,3 +32,6 @@ class MultipleChoiceHead(nn.Module):
         x = x.squeeze()
         x = torch.argmax(x, dim=1)
         return x
+
+
+class BERTForFunetuning(nn.Module):

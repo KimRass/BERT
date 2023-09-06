@@ -26,14 +26,8 @@ HIDDEN_SIZE = 384
 MLP_SIZE = 384 * 4
 
 ### Optimizer
-MAX_LR = 1e-4
-BETA1 = 0.9
-BETA2 = 0.999
-WEIGHT_DECAY = 0.01
-N_WARMUP_STEPS = 10_000
-# "We use Adam with learning rate of 1e-4, $beta_{1} = 0.9$, $beta_{2} = 0.999$,
-# L2 weight decay of 0.01, learning rate warmup over the first 10,000 steps,
-# and linear decay of the learning rate."
+N_EPOCHS = 3
+LR = 2e-5
 
 ### Training
 N_GPUS = torch.cuda.device_count()

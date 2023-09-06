@@ -7,14 +7,13 @@ from pathlib import Path
 from time import time
 from tqdm.auto import tqdm
 
-import config
+from finetune import config
 from utils import get_args, get_elapsed_time
 from pretrain.wordpiece import load_bert_tokenizer, load_fast_bert_tokenizer
-from pretrain.bookcorpus import BookCorpusForBERT
-from pretrain.model import BERTForPretraining
-from pretrain.masked_language_model import MaskedLanguageModel
-from pretrain.loss import LossForPretraining
-from pretrain.evalute import get_nsp_acc, get_mlm_acc
+from finetune.squad import SQuADForBERT
+from finetune.model import BERTForFunetuning
+# from finetune.pretrain.loss
+# from finetune.evalute
 
 # torch.set_printoptions(sci_mode=False)
 # torch.set_printoptions(linewidth=180)
