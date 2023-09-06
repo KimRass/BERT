@@ -12,13 +12,13 @@
 # about what might happen next in the scene. The correct answer is the (real) video caption for the next event in the video;
 # the three incorrect answers are adversarially generated and human verified, so as to fool machines but not humans.
 
-import sys
 import torch
-import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 import pandas as pd
 from tqdm.auto import tqdm
+from pathlib import Path
 
+from utils import _token_ids_to_segment_ids
 from pretrain.wordpiece import load_bert_tokenizer
 
 
@@ -30,27 +30,29 @@ from pretrain.wordpiece import load_bert_tokenizer
 
 
 class SWAGForBERT(Dataset):
-    def __init__(self, csv_path, tokenizer, max_len):
-        self.csv_path = csv_path
+    def __init__(self, csv_dir, tokenizer, seq_len, split="train"):
         self.tokenizer = tokenizer
-        self.max_len = max_len
+        self.seq_len = seq_len
+
+        self.csv_path = Path(csv_dir)/f"{split}.csv"
 
         self.cls_id = tokenizer.token_to_id("[CLS]")
         self.sep_id = tokenizer.token_to_id("[SEP]")
         self.pad_id = tokenizer.token_to_id("[PAD]")
         self.unk_id = tokenizer.token_to_id("[UNK]")
 
-        self.corpus = self._preprocess_raw_data(csv_path)
-        self.sent2encoded = {ctx: tokenizer.encode(ctx) for ctx in self.corpus["context"].unique()}
-        self.data = self._get_data()
+        self._preprocess()
+        self.sent_token_ids = {
+            ctx: tokenizer.encode(ctx).ids for ctx in self.raw_data["context"].unique()
+        }
+        self._get_data()
 
-    def _preprocess_raw_data(self, csv_path):
-        raw_data = pd.read_csv(csv_path)
-
+    def _preprocess(self):
+        self.raw_data = pd.read_csv(self.csv_path)
         for col in ["ending0", "ending1", "ending2", "ending3"]:
-            raw_data[col] = raw_data.apply(lambda x: f"""{x["sent2"]} {x[col]}""", axis=1)
-        raw_data = raw_data[["sent1", "ending0", "ending1", "ending2", "ending3", "label"]]
-        raw_data.rename(
+            self.raw_data[col] = self.raw_data.apply(lambda x: f"""{x["sent2"]} {x[col]}""", axis=1)
+        self.raw_data = self.raw_data[["sent1", "ending0", "ending1", "ending2", "ending3", "label"]]
+        self.raw_data.rename(
             {
                 "sent1": "context",
                 "ending0": "example1",
@@ -61,40 +63,49 @@ class SWAGForBERT(Dataset):
             axis=1,
             inplace=True,
         )
-        return raw_data
+        return self.raw_data
 
     def _get_data(self):
-        data = list()
-        for row in tqdm(self.corpus.itertuples(), total=len(self.corpus)):
-            batch = list()
+        self.data = list()
+        for row in tqdm(self.raw_data.itertuples(), total=len(self.raw_data)):
+            token_ids_batch = list()
+            seg_ids_batch = list()
             for i in range(1, 5):
-                token_ids = [self.cls_id] + self.sent2encoded[row.context].ids + [self.sep_id] +\
-                    tokenizer.encode(eval(f"""row.example{i}""")).ids + [self.sep_id]
-                token_ids += [self.pad_id] * (self.max_len - len(token_ids))
+                example_token_ids = self.tokenizer.encode(eval(f"""row.example{i}""")).ids
+                token_ids = [self.cls_id] + self.sent_token_ids[row.context] + [self.sep_id] +\
+                    example_token_ids
+                token_ids = token_ids[: self.seq_len - 1] + [self.sep_id]
+                token_ids += [self.pad_id] * (self.seq_len - len(token_ids))
+                token_ids = torch.as_tensor(token_ids)
 
-                batch.append(token_ids)
-            data.append({"token_indices": batch, "label": row.label})
-        return data
+                seg_ids = _token_ids_to_segment_ids(token_ids=token_ids, sep_id=self.sep_id)
+
+                token_ids_batch.append(token_ids)
+                seg_ids_batch.append(seg_ids)
+
+            self.data.append((
+                torch.stack(token_ids_batch),
+                torch.stack(seg_ids_batch),
+                torch.as_tensor(row.label),
+            ))
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
-        sample = self.data[idx]
-        return torch.as_tensor(sample["token_indices"]), torch.as_tensor(sample["label"])
+        return self.data[idx]
 
 
 if __name__ == "__main__":
-    csv_path = "/Users/jongbeomkim/Documents/datasets/swag/train.csv"
     vocab_path = "/Users/jongbeomkim/Desktop/workspace/bert_from_scratch/pretrain/bookcorpus_vocab.json"
     tokenizer = load_bert_tokenizer(vocab_path)
-    MAX_LEN = 512
-    swag_ds = SWAGForBERT(csv_path=csv_path, tokenizer=tokenizer, max_len=MAX_LEN)
-    BATCH_SIZE = 16
-    swag_dl = DataLoader(dataset=swag_ds, batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
-    for batch, (token_ids, label) in enumerate(swag_dl, start=1):
-        token_ids.shape
-        label.shape
+    MAX_LEN = 128
+    csv_dir = "/Users/jongbeomkim/Documents/datasets/swag/"
+    ds = SWAGForBERT(csv_dir=csv_dir, tokenizer=tokenizer, seq_len=MAX_LEN)
+    BATCH_SIZE = 2
+    dl = DataLoader(dataset=ds, batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
+    for batch, (token_ids, seg_ids, label) in enumerate(dl, start=1):
+        token_ids.shape, seg_ids.shape, label.shape
 
-        token_ids[0, 0, : 40]
-        token_ids[0, 1, : 40]
+    #     token_ids[0, 0, : 40]
+    #     token_ids[0, 1, : 40]

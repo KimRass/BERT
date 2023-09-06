@@ -13,8 +13,10 @@ from torch.utils.data import Dataset
 import random
 from tqdm.auto import tqdm
 from typing import Literal
+from pathlib import Path
 import pysbd
 
+from utils import _token_ids_to_segment_ids
 from pretrain.wordpiece import parse
 
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
@@ -60,7 +62,8 @@ class BookCorpusForBERT(Dataset):
 
     def _to_bert_input(self, former_token_ids, latter_token_ids):
         ### Add '[CLS]' and '[SEP]' tokens.
-        token_ids = [self.cls_id] + former_token_ids[: self.seq_len - 3] + [self.sep_id] + latter_token_ids
+        token_ids = [self.cls_id] + former_token_ids[: self.seq_len - 3] + [self.sep_id]\
+            + latter_token_ids
         token_ids = token_ids[: self.seq_len - 1] + [self.sep_id]
         ### Pad.
         token_ids += [self.pad_id] * (self.seq_len - len(token_ids))
@@ -79,15 +82,6 @@ class BookCorpusForBERT(Dataset):
         else:
             latter_line = self.lines[latter_idx]
             return latter_line, torch.as_tensor(is_next)
-
-    def _token_ids_to_segment_ids(self, token_ids):
-        seg_ids = torch.zeros_like(token_ids, dtype=token_ids.dtype, device=token_ids.device)
-        is_sep = (token_ids == self.sep_id)
-        # if is_sep.sum() == 2:
-        first_sep, second_sep = is_sep.nonzero()
-        # The positions from right after the first '[SEP]' token and to the second '[SEP]' token
-        seg_ids[first_sep + 1: second_sep + 1] = 1
-        return seg_ids
 
     def __len__(self):
         if self.tokenize_in_advance:
@@ -108,7 +102,7 @@ class BookCorpusForBERT(Dataset):
         token_ids = self._to_bert_input(
             former_token_ids=former_token_ids, latter_token_ids=latter_token_ids,
         )
-        seg_ids = self._token_ids_to_segment_ids(token_ids)
+        seg_ids = _token_ids_to_segment_ids(token_ids=token_ids, sep_id=self.sep_id)
         return token_ids, seg_ids, is_next
 
 

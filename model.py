@@ -6,7 +6,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
 
-import config
 from utils import print_number_of_parameters
 
 
@@ -196,14 +195,133 @@ class BERT(nn.Module):
         return x
 
 
-if __name__ == "__main__":
-    model = BERT(
-        vocab_size=config.VOCAB_SIZE,
-        max_len=512,
-        pad_id=3,
-        n_layers=6,
-        n_heads=6,
-        hidden_size=384,
-        mlp_size=384 * 4,
-    )
-    print_number_of_parameters(model)
+class MLMHead(nn.Module):
+    def __init__(self, vocab_size, hidden_size=768, drop_prob=0.1):
+        super().__init__()
+
+        self.proj = nn.Linear(hidden_size, vocab_size)
+        self.head_drop = nn.Dropout(drop_prob)
+
+    def forward(self, x):
+        x = self.proj(x)
+        # x = self.head_drop(x)
+        return x
+
+
+class NSPHead(nn.Module):
+    def __init__(self, hidden_size=768, drop_prob=0.1):
+        super().__init__()
+
+        self.proj = nn.Linear(hidden_size, 2)
+        self.head_drop = nn.Dropout(drop_prob)
+
+    def forward(self, x):
+        x = x[:, 0, :]
+        x = self.proj(x)
+        # x = self.head_drop(x)
+        return x
+
+
+class BERTForPretraining(nn.Module):
+    def __init__(self, vocab_size, max_len, pad_id, n_layers, n_heads, hidden_size, mlp_size):
+        super().__init__()
+
+        self.bert = BERT(
+            vocab_size=vocab_size,
+            max_len=max_len,
+            pad_id=pad_id,
+            n_layers=n_layers,
+            n_heads=n_heads,
+            hidden_size=hidden_size,
+            mlp_size=mlp_size,
+        )
+
+        self.nsp_head = NSPHead(hidden_size)
+        self.mlm_head = MLMHead(vocab_size=vocab_size, hidden_size=hidden_size)
+
+    def forward(self, token_ids, seg_ids):
+        x = self.bert(token_ids=token_ids, seg_ids=seg_ids)
+        pred_is_next = self.nsp_head(x)
+        pred_token_ids = self.mlm_head(x)
+        return pred_is_next, pred_token_ids
+
+
+
+
+class QuestionAnsweringHead(nn.Module):
+    def __init__(self, hidden_size):
+        super().__init__()
+
+        # "We only introduce a start vector $S \in \mathbb{R}^{H}$ and an end vector
+        # $E \in \mathbb{R}^{H}$ during fine-tuning."
+        self.proj = nn.Linear(hidden_size, 2)
+
+    def forward(self, x):
+        # "The probability of word $i$ being the start of the answer span is computed
+        # as a dot product between $T_{i}$ and $S$ followed by a softmax over all of the words
+        # in the paragraph."
+        x = self.proj(x)
+        start_logit, end_logit = torch.split(x, split_size_or_sections=1, dim=2)
+        start_logit, end_logit = start_logit.squeeze(), end_logit.squeeze()
+        start_id, end_id = torch.argmax(start_logit, dim=1), torch.argmax(end_logit, dim=1)
+        return start_id, end_id
+
+
+class MultipleChoiceHead(nn.Module):
+    def __init__(self, hidden_size, n_choices):
+        super().__init__()
+
+        self.n_choices = n_choices
+
+        self.proj = nn.Linear(hidden_size, 1)
+
+    def forward(self, x):
+        x = x[:, 0, :]
+        x = self.proj(x)
+        x = x.view(-1, self.n_choices)
+        # x = torch.softmax(x, dim=1)
+        # x = torch.argmax(x, dim=1)
+        return x
+
+
+class BERTForMultipleChoice(nn.Module):
+    def __init__(
+        self, vocab_size, max_len, pad_id, n_layers, n_heads, hidden_size, mlp_size, n_choices
+    ):
+        super().__init__()
+
+        self.bert = BERT(
+            vocab_size=vocab_size,
+            max_len=max_len,
+            pad_id=pad_id,
+            n_layers=n_layers,
+            n_heads=n_heads,
+            hidden_size=hidden_size,
+            mlp_size=mlp_size,
+        )
+        self.head = MultipleChoiceHead(hidden_size=hidden_size, n_choices=n_choices)
+
+    def forward(self, token_ids, seg_ids):
+        x = self.bert(token_ids=token_ids, seg_ids=seg_ids)
+        x = self.head(x)
+        return x
+
+
+# model = BERTForMultipleChoice(
+#     vocab_size=config.VOCAB_SIZE,
+#     max_len=config.MAX_LEN,
+#     pad_id=3,
+#     n_layers=config.N_LAYERS,
+#     n_heads=config.N_HEADS,
+#     hidden_size=config.HIDDEN_SIZE,
+#     mlp_size=config.MLP_SIZE,
+# ).to(config.DEVICE)
+
+# token_ids = torch.randint(high=1000, size=(8, 128))
+# seg_ids = torch.randint(high=2, size=(8, 128))
+# pred = model(token_ids, seg_ids)
+# x = pred.view(-1, 4)
+# x.shape
+# x
+# x = torch.argmax(x, dim=1)
+# torch.softmax(x, dim=1)

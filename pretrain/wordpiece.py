@@ -12,9 +12,21 @@ from tokenizers import decoders
 from pathlib import Path
 from tqdm.auto import tqdm
 import re
+import argparse
 
 import config
-from utils import get_args, REGEX
+from utils import REGEX
+
+
+def get_args():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--epubtxt_dir", type=str, required=False, default="../bookcurpus/epubtxt",
+    )
+
+    args = parser.parse_args()
+    return args
 
 
 def parse(epubtxt_dir):

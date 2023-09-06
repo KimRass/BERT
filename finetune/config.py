@@ -6,17 +6,11 @@ import torch
 from pathlib import Path
 
 ### Data
-VOCAB_SIZE = 30_522 // 2 # 학습이 너무 오래 걸리므로 절반으로 줄이겠습니다.
-# "To speed up pretraing in our experiments, we pre-train the model
-# with sequence length of 128 for 90% of the steps. Then, we train
-# the rest 10% of the steps of sequence of 512 to learn the positional embeddings."
+VOCAB_SIZE = 30_522 // 2
+VOCAB_PATH = Path(__file__).parent.parent/"pretrain/bookcorpus_vocab.json"
 MAX_LEN = 512
 SEQ_LEN = 128
-### BookCorpus
-VOCAB_PATH = Path(__file__).parent/"pretrain/bookcorpus_vocab.json"
-# VOCAB_DIR = Path(__file__).parent/"pretrain/bookcorpus_vocab"
-MIN_FREQ = 5
-LIM_ALPHABET = 100
+N_CHOICES = 4
 
 ### Architecture
 DROP_PROB = 0.1 # "We use a dropout probability of 0.1 on all layers."
@@ -28,6 +22,8 @@ MLP_SIZE = 384 * 4
 ### Optimizer
 N_EPOCHS = 3
 LR = 2e-5
+BETA1 = 0.9
+BETA2 = 0.999
 
 ### Training
 N_GPUS = torch.cuda.device_count()
@@ -35,10 +31,6 @@ if N_GPUS > 0:
     DEVICE = torch.device("cuda")
 else:
     DEVICE = torch.device("cpu")
-N_WORKERS = 4
+N_WORKERS = 0
 CKPT_DIR = Path(__file__).parent/"checkpoints"
 N_CKPT_SAMPLES = 400_000
-### Masked Language Model
-SELECT_PROB = 0.15
-MASK_PROB = 0.8
-RANDOMIZE_PROB = 0.1
