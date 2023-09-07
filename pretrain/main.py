@@ -8,7 +8,7 @@ from time import time
 from tqdm.auto import tqdm
 import argparse
 
-from pretrain import config
+import pretrain.config as config
 from utils import get_elapsed_time
 from model import BERTForPretraining
 from pretrain.wordpiece import load_bert_tokenizer, load_fast_bert_tokenizer
