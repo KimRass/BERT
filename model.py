@@ -204,7 +204,7 @@ class MLMHead(nn.Module):
 
     def forward(self, x):
         x = self.proj(x)
-        # x = self.head_drop(x)
+        x = self.head_drop(x)
         return x
 
 
@@ -218,7 +218,7 @@ class NSPHead(nn.Module):
     def forward(self, x):
         x = x[:, 0, :]
         x = self.proj(x)
-        # x = self.head_drop(x)
+        x = self.head_drop(x)
         return x
 
 
@@ -244,8 +244,6 @@ class BERTForPretraining(nn.Module):
         pred_is_next = self.nsp_head(x)
         pred_token_ids = self.mlm_head(x)
         return pred_is_next, pred_token_ids
-
-
 
 
 class QuestionAnsweringHead(nn.Module):
@@ -286,7 +284,16 @@ class MultipleChoiceHead(nn.Module):
 
 class BERTForMultipleChoice(nn.Module):
     def __init__(
-        self, vocab_size, max_len, pad_id, n_layers, n_heads, hidden_size, mlp_size, n_choices
+        self,
+        vocab_size,
+        max_len,
+        pad_id,
+        n_layers,
+        n_heads,
+        hidden_size,
+        mlp_size,
+        n_choices,
+        drop_prob=0.1,
     ):
         super().__init__()
 
@@ -299,11 +306,13 @@ class BERTForMultipleChoice(nn.Module):
             hidden_size=hidden_size,
             mlp_size=mlp_size,
         )
-        self.head = MultipleChoiceHead(hidden_size=hidden_size, n_choices=n_choices)
+        self.multi_choice_head = MultipleChoiceHead(hidden_size=hidden_size, n_choices=n_choices)
+        self.head_drop = nn.Dropout(drop_prob)
 
     def forward(self, token_ids, seg_ids):
         x = self.bert(token_ids=token_ids, seg_ids=seg_ids)
-        x = self.head(x)
+        x = self.multi_choice_head(x)
+        x = self.head_drop(x)
         return x
 
 

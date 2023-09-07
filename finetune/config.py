@@ -20,10 +20,9 @@ HIDDEN_SIZE = 384
 MLP_SIZE = 384 * 4
 
 ### Optimizer
+# "We fine-tune the model for 3 epochs with a learning rate of 2e-5 and a batch size of 16."
 N_EPOCHS = 3
 LR = 2e-5
-BETA1 = 0.9
-BETA2 = 0.999
 
 ### Training
 N_GPUS = torch.cuda.device_count()

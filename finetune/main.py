@@ -13,7 +13,6 @@ from utils import get_elapsed_time
 from pretrain.wordpiece import load_bert_tokenizer, load_fast_bert_tokenizer
 from model import BERTForMultipleChoice
 from finetune.swag import SWAGForBERT
-# from finetune.squad import SQuADForBERT
 
 
 def get_args():
@@ -21,7 +20,8 @@ def get_args():
 
     parser.add_argument("--csv_dir", type=str, required=True)
     parser.add_argument("--split", type=str, required=False)
-    parser.add_argument("--batch_size", type=int, required=False, default=256)
+    parser.add_argument("--pretrained", type=str, required=False)
+    parser.add_argument("--batch_size", type=int, required=False, default=16)
     parser.add_argument("--ckpt_path", type=str, required=False)
 
     args = parser.parse_args()
@@ -73,12 +73,14 @@ if __name__ == "__main__":
     if config.N_GPUS > 1:
         model = nn.DataParallel(model)
 
-    optim = Adam(
-        model.parameters(),
-        lr=config.LR,
-        betas=(config.BETA1, config.BETA2),
-        # weight_decay=config.WEIGHT_DECAY,
-    )
+    ### Load pre-trained parameters.
+    ckpt = torch.load(args.pretrained, map_location=config.DEVICE)
+    if config.N_GPUS > 1:
+        model.module.load_state_dict(ckpt["model"], strict=False)
+    else:
+        model.load_state_dict(ckpt["model"], strict=False)
+
+    optim = Adam(model.parameters(), lr=config.LR)
 
     crit = nn.CrossEntropyLoss(reduction="mean")
 
