@@ -26,6 +26,7 @@ def get_args():
     )
     parser.add_argument("--batch_size", type=int, required=False, default=256)
     parser.add_argument("--tokenize_in_advance", action="store_true")
+    parser.add_argument("--smoothing", type=float, required=False, default=0)
     parser.add_argument("--ckpt_path", type=str, required=False)
 
     args = parser.parse_args()
@@ -113,7 +114,7 @@ if __name__ == "__main__":
     )
 
     crit = LossForPretraining(
-        vocab_size=config.VOCAB_SIZE, seq_len=config.SEQ_LEN, smoothing=config.SMOOTHING,
+        vocab_size=config.VOCAB_SIZE, seq_len=config.SEQ_LEN, smoothing=args.smoothing,
     )
 
     ### Resume
