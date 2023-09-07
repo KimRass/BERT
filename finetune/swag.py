@@ -84,8 +84,8 @@ class SWAGForBERT(Dataset):
                 seg_ids_batch.append(seg_ids)
 
             self.data.append((
-                torch.stack(token_ids_batch).view(-1, self.seq_len),
-                torch.stack(seg_ids_batch).view(-1, self.seq_len),
+                torch.stack(token_ids_batch),
+                torch.stack(seg_ids_batch),
                 torch.as_tensor(row.label),
             ))
 

@@ -51,8 +51,8 @@ def validate(val_dl, model, metric):
         seg_ids = seg_ids.to(config.DEVICE)
         gt = gt.to(config.DEVICE)
 
-        # token_ids = token_ids.view(-1, train_ds.seq_len)
-        # seg_ids = seg_ids.view(-1, train_ds.seq_len)
+        token_ids = token_ids.view(-1, config.SEQ_LEN)
+        seg_ids = seg_ids.view(-1, config.SEQ_LEN)
 
         pred = model(token_ids=token_ids, seg_ids=seg_ids)
         acc = metric(pred=pred, gt=gt)
@@ -151,8 +151,8 @@ if __name__ == "__main__":
             seg_ids = seg_ids.to(config.DEVICE)
             gt = gt.to(config.DEVICE)
 
-            # token_ids = token_ids.view(-1, train_ds.seq_len)
-            # seg_ids = seg_ids.view(-1, train_ds.seq_len)
+            token_ids = token_ids.view(-1, config.SEQ_LEN)
+            seg_ids = seg_ids.view(-1, config.SEQ_LEN)
 
             pred = model(token_ids=token_ids, seg_ids=seg_ids)
             loss = crit(pred, gt)
