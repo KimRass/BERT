@@ -54,7 +54,6 @@ if __name__ == "__main__":
     print(f"SEQ_LEN = {config.SEQ_LEN}")
 
     tokenizer = load_bert_tokenizer(config.VOCAB_PATH)
-    # tokenizer = load_fast_bert_tokenizer(vocab_dir=config.VOCAB_DIR)
     train_ds = SWAGForBERT(
         csv_dir=args.csv_dir, tokenizer=tokenizer, seq_len=config.SEQ_LEN, split=args.split,
     )
@@ -79,6 +78,7 @@ if __name__ == "__main__":
         model.module.load_state_dict(ckpt["model"], strict=False)
     else:
         model.load_state_dict(ckpt["model"], strict=False)
+    print(f"Loaded pre-trained parameters from\n    '{str(Path(args.pretrained).name)}.'")
 
     optim = Adam(model.parameters(), lr=config.LR)
 
