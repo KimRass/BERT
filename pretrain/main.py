@@ -112,7 +112,9 @@ if __name__ == "__main__":
         weight_decay=config.WEIGHT_DECAY,
     )
 
-    crit = LossForPretraining(vocab_size=config.VOCAB_SIZE, smoothing=config.SMOOTHING)
+    crit = LossForPretraining(
+        vocab_size=config.VOCAB_SIZE, seq_len=config.SEQ_LEN, smoothing=config.SMOOTHING,
+    )
 
     ### Resume
     if args.ckpt_path is not None:
