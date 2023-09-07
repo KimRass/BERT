@@ -21,7 +21,8 @@ MLP_SIZE = 384 * 4
 
 ### Optimizer
 # "We fine-tune the model for 3 epochs with a learning rate of 2e-5 and a batch size of 16."
-N_EPOCHS = 3
+# N_EPOCHS = 3
+N_EPOCHS = 20
 LR = 2e-5
 
 ### Training
