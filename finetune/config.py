@@ -33,4 +33,4 @@ else:
     DEVICE = torch.device("cpu")
 N_WORKERS = 4
 CKPT_DIR = Path(__file__).parent/"checkpoints"
-N_CKPT_SAMPLES = 10_000
+N_CKPT_SAMPLES = 100_000

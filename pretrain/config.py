@@ -19,11 +19,14 @@ MIN_FREQ = 5
 LIM_ALPHABET = 100
 
 ### Architecture
-DROP_PROB = 0.1 # "We use a dropout probability of 0.1 on all layers."
 N_LAYERS = 6
 N_HEADS = 6
 HIDDEN_SIZE = 384
 MLP_SIZE = 384 * 4
+
+### Regularization
+DROP_PROB = 0.1 # "We use a dropout probability of 0.1 on all layers."
+SMOOTHING = 0.1
 
 ### Optimizer
 # "We use Adam with learning rate of 1e-4, $beta_{1} = 0.9$, $beta_{2} = 0.999$,
@@ -32,7 +35,8 @@ MLP_SIZE = 384 * 4
 MAX_LR = 1e-4
 BETA1 = 0.9
 BETA2 = 0.999
-WEIGHT_DECAY = 0.01
+# WEIGHT_DECAY = 0.01
+WEIGHT_DECAY = 0
 N_WARMUP_STEPS = 10_000
 
 ### Training

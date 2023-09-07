@@ -109,10 +109,10 @@ if __name__ == "__main__":
         model.parameters(),
         lr=config.MAX_LR,
         betas=(config.BETA1, config.BETA2),
-        # weight_decay=config.WEIGHT_DECAY,
+        weight_decay=config.WEIGHT_DECAY,
     )
 
-    crit = LossForPretraining()
+    crit = LossForPretraining(vocab_size=config.VOCAB_SIZE, smoothing=config.SMOOTHING)
 
     ### Resume
     if args.ckpt_path is not None:
