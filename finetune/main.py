@@ -172,7 +172,7 @@ if __name__ == "__main__":
                 accum_loss = 0
                 step_cnt = 0
 
-            avg_acc = validate(val_dl=val_dl, model=model, metric=metric)
+                avg_acc = validate(val_dl=val_dl, model=model, metric=metric)
             # cur_ckpt_path = config.CKPT_DIR/f"bookcorpus_step_{step}.pth"
             # save_checkpoint(step=step, model=model, optim=optim, ckpt_path=cur_ckpt_path)
             # if prev_ckpt_path.exists():
