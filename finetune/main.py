@@ -122,13 +122,13 @@ if __name__ == "__main__":
             accum_loss += loss.item()
             step_cnt += 1
 
-            # if (step % (config.N_CKPT_SAMPLES // args.batch_size) == 0) or (step == N_STEPS):
-            print(f"[ {epoch}/{config.N_EPOCHS} ][ {step:,}/{len(train_dl):,} ]", end="")
-            print(f"[ {get_elapsed_time(start_time)} ][ NSP loss: {accum_loss / step_cnt:.4f} ]")
+            if step % (config.N_CKPT_SAMPLES // args.batch_size) == 0:
+                print(f"[ {epoch}/{config.N_EPOCHS} ][ {step:,}/{len(train_dl):,} ]", end="")
+                print(f"[ {get_elapsed_time(start_time)} ][ NSP loss: {accum_loss / step_cnt:.4f} ]")
 
-            start_time = time()
-            accum_loss = 0
-            step_cnt = 0
+                start_time = time()
+                accum_loss = 0
+                step_cnt = 0
 
             # cur_ckpt_path = config.CKPT_DIR/f"bookcorpus_step_{step}.pth"
             # save_checkpoint(step=step, model=model, optim=optim, ckpt_path=cur_ckpt_path)

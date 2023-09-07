@@ -30,6 +30,6 @@ if N_GPUS > 0:
     DEVICE = torch.device("cuda")
 else:
     DEVICE = torch.device("cpu")
-N_WORKERS = 0
+N_WORKERS = 4
 CKPT_DIR = Path(__file__).parent/"checkpoints"
 N_CKPT_SAMPLES = 400_000
