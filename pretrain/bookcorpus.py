@@ -37,6 +37,7 @@ class BookCorpusForBERT(Dataset):
         self.tokenize_in_advance = tokenize_in_advance
         self.chunk_size = chunk_size
 
+        self.unk_id = tokenizer.token_to_id("[UNK]")
         self.cls_id = tokenizer.token_to_id("[CLS]")
         self.sep_id = tokenizer.token_to_id("[SEP]")
         self.pad_id = tokenizer.token_to_id("[PAD]")

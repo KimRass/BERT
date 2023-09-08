@@ -100,7 +100,9 @@ if __name__ == "__main__":
     mlm = MaskedLanguageModel(
         vocab_size=config.VOCAB_SIZE,
         mask_id=tokenizer.token_to_id("[MASK]"),
-        no_mask_token_ids=[train_ds.cls_id, train_ds.sep_id, train_ds.pad_id, train_ds.unk_id],
+        no_mask_token_ids=[
+            train_ds.unk_id, train_ds.cls_id, train_ds.sep_id, train_ds.pad_id, train_ds.unk_id,
+        ],
         select_prob=config.SELECT_PROB,
         mask_prob=config.MASK_PROB,
         randomize_prob=config.RANDOMIZE_PROB,
@@ -113,9 +115,7 @@ if __name__ == "__main__":
         weight_decay=config.WEIGHT_DECAY,
     )
 
-    crit = LossForPretraining(
-        vocab_size=config.VOCAB_SIZE, seq_len=config.SEQ_LEN, smoothing=args.smoothing,
-    )
+    crit = LossForPretraining(vocab_size=config.VOCAB_SIZE)
 
     ### Resume
     if args.ckpt_path is not None:
@@ -148,7 +148,7 @@ if __name__ == "__main__":
                 seg_ids = seg_ids.to(config.DEVICE)
                 gt_is_next = gt_is_next.to(config.DEVICE)
 
-                masked_token_ids = mlm(gt_token_ids)
+                masked_token_ids, select_mask = mlm(gt_token_ids)
 
                 pred_is_next, pred_token_ids = model(token_ids=masked_token_ids, seg_ids=seg_ids)
                 nsp_loss, mlm_loss = crit(
@@ -156,6 +156,7 @@ if __name__ == "__main__":
                     gt_is_next=gt_is_next,
                     pred_token_ids=pred_token_ids,
                     gt_token_ids=gt_token_ids,
+                    select_mask=select_mask,
                 )
                 loss = nsp_loss + mlm_loss
 

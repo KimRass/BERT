@@ -15,7 +15,7 @@ class MaskedLanguageModel(object):
         no_mask_token_ids=[],
         select_prob=0.15,
         mask_prob=0.8,
-        randomize_prob=0.1
+        randomize_prob=0.1,
     ):
         self.vocab_size = vocab_size
         self.mask_id = mask_id
@@ -25,10 +25,16 @@ class MaskedLanguageModel(object):
         self.randomize_prob = randomize_prob
 
         if mask_id not in no_mask_token_ids:
-            self.no_mask_token_ids += [mask_id]
+            no_mask_token_ids += [mask_id]
 
 
     def __call__(self, gt_token_ids):
+        # vocab_size = 30
+        # no_mask_token_ids = list()
+        # no_mask_token_ids = [0, 1, 2, 3, 4]
+        # gt_token_ids = torch.randint(high=vocab_size, size=(2, 128))
+        # gt_token_ids[:, 0] = 1
+
         masked_token_ids = gt_token_ids.clone()
 
         rand_tensor = torch.rand(masked_token_ids.shape, device=masked_token_ids.device)
@@ -40,25 +46,32 @@ class MaskedLanguageModel(object):
 
         # "Chooses 15% of the token positions at random for prediction."
         select_mask = (rand_tensor < self.select_prob)
-        # select_mask.sum() / (no_mask_mask.numel() - no_mask_mask.sum()) == 0.15
-        mask_mask = select_mask & (rand_tensor < self.mask_prob)
-        randomize_mask = select_mask &\
-            (rand_tensor >= self.mask_prob) &\
-            (rand_tensor < (self.mask_prob + self.randomize_prob))
+        # `select_mask.sum() / gt_token_ids.numel() ~= 0.15`
 
-        # "If the $i$-th token is chosen, we replace the $i$-th token with
-        # (1) the [MASK] token 80% of the time."
+        # "If the $i$-th token is chosen, we replace the $i$-th token with (1) the [MASK] token
+        # 80% of the time."
+        rand_tensor = torch.rand(masked_token_ids.shape, device=masked_token_ids.device)
+        mask_mask = select_mask & (rand_tensor < self.mask_prob)
+        # `mask_mask.sum() / select_mask.sum() ~= 0.8`
         masked_token_ids.masked_fill_(mask=mask_mask, value=self.mask_id)
 
         # "(2) a random token 10% of the time
         # (3) the unchanged $i$-th token 10% of the time."
+        rand_tensor = torch.rand(masked_token_ids.shape, device=masked_token_ids.device)
+        randomize_mask = select_mask &\
+            (rand_tensor >= self.mask_prob) &\
+            (rand_tensor < (self.mask_prob + self.randomize_prob))
+        # `randomize_mask.sum() / select_mask.sum() ~= 0.1`
         random_token_ids = torch.randint(
             high=self.vocab_size,
             size=torch.Size((randomize_mask.sum(),)),
             device=masked_token_ids.device,
         )
         masked_token_ids[randomize_mask.nonzero(as_tuple=True)] = random_token_ids
-        return masked_token_ids
+
+        # new_gt_token_ids = gt_token_ids.clone()
+        # new_gt_token_ids[select_mask] = -100
+        return masked_token_ids, select_mask
 
 
 if __name__ == "__main__":
