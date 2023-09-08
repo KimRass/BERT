@@ -1,5 +1,6 @@
 # References
     # https://github.com/codertimo/BERT-pytorch/tree/master/bert_pytorch/model
+    # https://github.com/huggingface/transformers/blob/main/src/transformers/models/bert/modeling_bert.py
 
 import torch
 import torch.nn as nn
@@ -196,29 +197,25 @@ class BERT(nn.Module):
 
 
 class MLMHead(nn.Module):
-    def __init__(self, vocab_size, hidden_size=768, drop_prob=0.1):
+    def __init__(self, vocab_size, hidden_size=768):
         super().__init__()
 
         self.proj = nn.Linear(hidden_size, vocab_size)
-        self.head_drop = nn.Dropout(drop_prob)
 
     def forward(self, x):
         x = self.proj(x)
-        x = self.head_drop(x)
         return x
 
 
 class NSPHead(nn.Module):
-    def __init__(self, hidden_size=768, drop_prob=0.1):
+    def __init__(self, hidden_size=768):
         super().__init__()
 
         self.proj = nn.Linear(hidden_size, 2)
-        self.head_drop = nn.Dropout(drop_prob)
 
     def forward(self, x):
         x = x[:, 0, :]
         x = self.proj(x)
-        x = self.head_drop(x)
         return x
 
 

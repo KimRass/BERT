@@ -95,9 +95,13 @@ class BookCorpusForBERT(Dataset):
             latter_token_ids, is_next = self._sample_latter_sentence(idx)
         else:
             former_line = self.lines[idx]
-            former_token_ids = self.tokenizer.encode(former_line)[1: -1]
+            former_token_ids = self.tokenizer.encode(
+                former_line, truncation=True, max_length=self.seq_len,
+            )[1: -1]
             latter_line, is_next = self._sample_latter_sentence(idx)
-            latter_token_ids = self.tokenizer.encode(latter_line)[1: -1]
+            latter_token_ids = self.tokenizer.encode(
+                latter_line, truncation=True, max_length=self.seq_len,
+            )[1: -1]
 
         token_ids = self._to_bert_input(
             former_token_ids=former_token_ids, latter_token_ids=latter_token_ids,
