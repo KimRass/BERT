@@ -37,38 +37,28 @@ class BookCorpusForBERT(Dataset):
         self.tokenize_in_advance = tokenize_in_advance
         self.chunk_size = chunk_size
 
-        self.unk_id = tokenizer.token_to_id("[UNK]")
-        self.cls_id = tokenizer.token_to_id("[CLS]")
-        self.sep_id = tokenizer.token_to_id("[SEP]")
-        self.pad_id = tokenizer.token_to_id("[PAD]")
-        self.unk_id = tokenizer.token_to_id("[UNK]")
-        # self.cls_id = tokenizer.cls_token_id
-        # self.sep_id = tokenizer.sep_token_id
-        # self.pad_id = tokenizer.pad_token_id
-        # self.unk_id = tokenizer.unk_token_id
+        # self.unk_id = tokenizer.token_to_id("[UNK]")
+        # self.cls_id = tokenizer.token_to_id("[CLS]")
+        # self.sep_id = tokenizer.token_to_id("[SEP]")
+        # self.pad_id = tokenizer.token_to_id("[PAD]")
+        self.unk_id = tokenizer.unk_token_id
+        self.cls_id = tokenizer.cls_token_id
+        self.sep_id = tokenizer.sep_token_id
+        self.pad_id = tokenizer.pad_token_id
 
         self.lines = parse(epubtxt_dir)
-        if tokenize_in_advance:
-            self._tokenize()
+        # if tokenize_in_advance:
+        #     self._tokenize()
 
-    def _tokenize(self):
-        print("Tokenizing BookCorpus...")
-        self.token_ids_ls = list()
-        for idx in tqdm(range(0, len(self.lines), self.chunk_size)):
-            encoding = self.tokenizer(self.lines[idx: idx + self.chunk_size])
-            self.token_ids_ls.extend([i[1: -1] for i in encoding["input_ids"]])
+    # def _tokenize(self):
+    #     print("Tokenizing BookCorpus...")
+    #     self.token_ids_ls = list()
+    #     for idx in tqdm(range(0, len(self.lines), self.chunk_size)):
+    #         # encoding = self.tokenizer(self.lines[idx: idx + self.chunk_size])
+    #         # self.token_ids_ls.extend([i[1: -1] for i in encoding["input_ids"]])
     #         encoded = self.tokenizer.encode_batch(self.lines[idx: idx + self.chunk_size])
     #         self.token_ids_ls.extend([i.ids for i in encoded])
-        print("Completed")
-
-    def _to_bert_input(self, former_token_ids, latter_token_ids):
-        ### Add '[CLS]' and '[SEP]' tokens.
-        token_ids = [self.cls_id] + former_token_ids[: self.seq_len - 3] + [self.sep_id]\
-            + latter_token_ids
-        token_ids = token_ids[: self.seq_len - 1] + [self.sep_id]
-        ### Pad.
-        token_ids += [self.pad_id] * (self.seq_len - len(token_ids))
-        return torch.as_tensor(token_ids)
+    #     print("Completed")
 
     def _sample_latter_sentence(self, idx):
         if random.random() < 0.5:
@@ -84,6 +74,15 @@ class BookCorpusForBERT(Dataset):
             latter_line = self.lines[latter_idx]
             return latter_line, torch.as_tensor(is_next)
 
+    def _to_bert_input(self, former_token_ids, latter_token_ids):
+        ### Add '[CLS]' and '[SEP]' tokens.
+        token_ids = [self.cls_id] + former_token_ids[: self.seq_len - 3] + [self.sep_id]\
+            + latter_token_ids
+        token_ids = token_ids[: self.seq_len - 1] + [self.sep_id]
+        ### Pad.
+        token_ids += [self.pad_id] * (self.seq_len - len(token_ids))
+        return torch.as_tensor(token_ids)
+
     def __len__(self):
         if self.tokenize_in_advance:
             return len(self.token_ids_ls) - 1
@@ -96,9 +95,9 @@ class BookCorpusForBERT(Dataset):
             latter_token_ids, is_next = self._sample_latter_sentence(idx)
         else:
             former_line = self.lines[idx]
-            former_token_ids = self.tokenizer.encode(former_line).ids
+            former_token_ids = self.tokenizer.encode(former_line)[1: -1]
             latter_line, is_next = self._sample_latter_sentence(idx)
-            latter_token_ids = self.tokenizer.encode(latter_line).ids
+            latter_token_ids = self.tokenizer.encode(latter_line)[1: -1]
 
         token_ids = self._to_bert_input(
             former_token_ids=former_token_ids, latter_token_ids=latter_token_ids,

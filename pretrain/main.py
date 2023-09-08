@@ -26,7 +26,6 @@ def get_args():
     )
     parser.add_argument("--batch_size", type=int, required=False, default=256)
     parser.add_argument("--tokenize_in_advance", action="store_true")
-    parser.add_argument("--smoothing", type=float, required=False, default=0)
     parser.add_argument("--ckpt_path", type=str, required=False)
 
     args = parser.parse_args()
@@ -68,8 +67,8 @@ if __name__ == "__main__":
     N_STEPS = (256 * 512 * 1_000_000) // (args.batch_size * config.SEQ_LEN)
     print(f"N_STEPS = {N_STEPS:,}", end="\n\n")
 
-    tokenizer = load_bert_tokenizer(config.VOCAB_PATH)
-    # tokenizer = load_fast_bert_tokenizer(vocab_dir=config.VOCAB_DIR)
+    # tokenizer = load_bert_tokenizer(config.VOCAB_PATH)
+    tokenizer = load_fast_bert_tokenizer(vocab_dir=config.VOCAB_DIR)
     train_ds = BookCorpusForBERT(
         epubtxt_dir=args.epubtxt_dir,
         tokenizer=tokenizer,
@@ -99,7 +98,7 @@ if __name__ == "__main__":
 
     mlm = MaskedLanguageModel(
         vocab_size=config.VOCAB_SIZE,
-        mask_id=tokenizer.token_to_id("[MASK]"),
+        mask_id=tokenizer.mask_token_id,
         no_mask_token_ids=[
             train_ds.unk_id, train_ds.cls_id, train_ds.sep_id, train_ds.pad_id, train_ds.unk_id,
         ],
