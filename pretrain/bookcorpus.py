@@ -21,6 +21,17 @@ from pretrain.wordpiece import parse
 
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
 
+# encoding = tokenizer(
+#     text_target="asd asdxc ad"],
+#     truncation=True,
+#     max_length=512,
+#     return_token_type_ids=False,
+#     return_attention_mask=False,
+# )
+# isinstance(encoding, list)
+# isinstance(encoding["input_ids"][0], list)
+# [token_ids[1: -1] for token_ids in encoding["input_ids"]]
+
 
 class BookCorpusForBERT(Dataset):
     def __init__(
@@ -84,7 +95,10 @@ class BookCorpusForBERT(Dataset):
             return_token_type_ids=False,
             return_attention_mask=False,
         )
-        return [token_ids[1: -1] for token_ids in encoding["input_ids"]]
+        if isinstance(x, str):
+            return encoding["input_ids"][1: -1]
+        else:
+            return [token_ids[1: -1] for token_ids in encoding["input_ids"]]
 
     def __len__(self):
         if self.tokenize_in_advance:
