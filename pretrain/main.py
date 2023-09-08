@@ -176,7 +176,7 @@ if __name__ == "__main__":
                     print(f"[ {step:,}/{N_STEPS:,} ][ {get_elapsed_time(start_time)} ]", end="")
                     print(f"[ NSP loss: {accum_nsp_loss / step_cnt:.4f} ]", end="")
                     print(f"[ NSP acc: {accum_nsp_acc / step_cnt:.3f} ]", end="")
-                    print(f"[ MLM loss: {accum_mlm_loss / step_cnt:.4f} ]", end="")
+                    print(f"[ MLM loss: {accum_mlm_loss / step_cnt:.6f} ]", end="")
                     print(f"[ MLM acc: {accum_mlm_acc / step_cnt:.3f} ]")
 
                     start_time = time()

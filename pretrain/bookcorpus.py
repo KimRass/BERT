@@ -12,11 +12,11 @@ import torch
 from torch.utils.data import Dataset
 import random
 from tqdm.auto import tqdm
-from typing import Literal
 from pathlib import Path
 import pysbd
+import re
 
-from utils import _token_ids_to_segment_ids
+from utils import _token_ids_to_segment_ids, REGEX
 from pretrain.wordpiece import parse
 
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
@@ -37,10 +37,6 @@ class BookCorpusForBERT(Dataset):
         self.tokenize_in_advance = tokenize_in_advance
         self.chunk_size = chunk_size
 
-        # self.unk_id = tokenizer.token_to_id("[UNK]")
-        # self.cls_id = tokenizer.token_to_id("[CLS]")
-        # self.sep_id = tokenizer.token_to_id("[SEP]")
-        # self.pad_id = tokenizer.token_to_id("[PAD]")
         self.unk_id = tokenizer.unk_token_id
         self.cls_id = tokenizer.cls_token_id
         self.sep_id = tokenizer.sep_token_id
@@ -96,11 +92,11 @@ class BookCorpusForBERT(Dataset):
         else:
             former_line = self.lines[idx]
             former_token_ids = self.tokenizer.encode(
-                former_line, truncation=True, max_length=self.seq_len,
+                former_line, truncation=True, seq_length=self.seq_len,
             )[1: -1]
             latter_line, is_next = self._sample_latter_sentence(idx)
             latter_token_ids = self.tokenizer.encode(
-                latter_line, truncation=True, max_length=self.seq_len,
+                latter_line, truncation=True, seq_length=self.seq_len,
             )[1: -1]
 
         token_ids = self._to_bert_input(
@@ -113,132 +109,82 @@ class BookCorpusForBERT(Dataset):
 class BookCorpusForRoBERTa(Dataset):
     def __init__(
         self,
-        data_dir,
+        epubtxt_dir,
         tokenizer,
-        max_len,
-        mode: Literal["segment_pair", "sentence_pair", "full_sentences", "doc_sentences"]="doc_sentences"
+        seq_len,
+        mode="full_sentences",
     ):
         assert mode in ["segment_pair", "sentence_pair", "full_sentences", "doc_sentences"],\
             "The argument `mode` should be one of `'segment_pair'`, `'sentence_pair'`, 'full_sentences', and 'doc_sentences'."
 
-        self.data_dir = data_dir
+        self.epubtxt_dir = epubtxt_dir
         self.tokenizer = tokenizer
-        self.max_len = max_len
+        self.seq_len = seq_len
         self.mode = mode
 
         self.segmentor = pysbd.Segmenter(language="en", clean=False)
 
-        self.cls_id = tokenizer.token_to_id("[CLS]")
-        self.sep_id = tokenizer.token_to_id("[SEP]")
-        self.pad_id = tokenizer.token_to_id("[PAD]")
-        self.unk_id = tokenizer.token_to_id("[UNK]")
+        self.unk_id = tokenizer.unk_token_id
+        self.cls_id = tokenizer.cls_token_id
+        self.sep_id = tokenizer.sep_token_id
+        self.pad_id = tokenizer.pad_token_id
 
         if mode == "segment_pair":
-            self.corpus = self._get_corpus(perform_sbd=False)
+            self._parse(perform_sbd=False)
         else:
-            self.corpus = self._get_corpus(perform_sbd=True)
-        self.data = self._get_data(self.corpus)
+            self._parse(perform_sbd=True)
+        self.data = self._get_data(self.lines)
 
     def _disambiguate_sentence_boundary(self, text):
         segmented = self.segmentor.segment(text)
         return [i.strip() for i in segmented]
     
-    def _get_corpus(self, perform_sbd):
-        corpus = list()
-        for doc_path in tqdm(list(Path(data_dir).glob("**/*.txt"))):
-            for parag in open(doc_path, mode="r", encoding="utf-8"):
-                parag = parag.strip()
-                if parag == "":
-                    continue
+    def _parse(self, perform_sbd):
+        print("Parsing BookCorpus...")
+        self.lines = list()
+        for doc_path in tqdm(list(Path(self.epubtxt_dir).glob("*.txt"))):
+            with open(doc_path, mode="r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if (not line) or (re.search(pattern=REGEX, string=line)) or (line.count(" ") < 1):
+                        continue
 
                 if perform_sbd:
-                    sents = self._disambiguate_sentence_boundary(parag)
+                    sents = self._disambiguate_sentence_boundary(line)
                     for sent in sents:
-                        token_ids = self.tokenizer.encode(sent).ids
-                        corpus.append(
+                        token_ids = self.tokenizer.encode(
+                            sent, truncation=True, seq_length=self.seq_len,
+                        )[1: -1]
+                        self.lines.append(
                             {
                                 "document": str(doc_path),
-                                "paragraph": parag,
+                                "paragraph": line,
                                 "sentence": sent,
                                 "token_indices": token_ids
                             }
                         )
                 else:
-                    token_ids = self.tokenizer.encode(parag).ids
-                    corpus.append(
+                    token_ids = self.tokenizer.encode(
+                        line, truncation=True, seq_length=self.seq_len,
+                    )[1: -1]
+                    self.lines.append(
                         {
                             "document": str(doc_path),
-                            "paragraph": parag,
+                            "paragraph": line,
                             "token_indices": token_ids
                         }
                     )
-        return corpus
 
     def _convert_to_bert_input_representation(self, ls_token_ids):
-        if self.mode in ["segment_pair", "sentence_pair"]:
-            token_ids = (
-                [self.cls_id] + ls_token_ids[0][: self.max_len - 3] + [self.sep_id] + ls_token_ids[1]
-            )[: self.max_len - 1] + [self.sep_id]
-            token_ids += [self.pad_id] * (self.max_len - len(token_ids))
-        else:
-            token_ids = sum(ls_token_ids, list())
-            token_ids = token_ids[: self.max_len - 2]
-            token_ids = [self.cls_id] + token_ids + [self.sep_id]
-            token_ids += [self.pad_id] * (self.max_len - len(token_ids))
+        token_ids = sum(ls_token_ids, list())
+        token_ids = token_ids[: self.seq_len - 2]
+        token_ids = [self.cls_id] + token_ids + [self.sep_id]
+        token_ids += [self.pad_id] * (self.seq_len - len(token_ids))
         return token_ids
 
     def _get_data(self, corpus):
         data = list()
-
-        # "Each input has a pair of segments, which can each contain multiple natural sentences,
-        # but the total combined length must be less than 512 tokens."
-        if self.mode == "segment_pair":
-            for id1 in range(len(corpus) - 1):
-                if random.random() < 0.5:
-                    is_next = True
-                    id2 = id1 + 1
-                else:
-                    is_next = False
-                    id2 = random.randrange(len(corpus))
-                segs = [corpus[id1]["paragraph"], corpus[id2]["paragraph"]]
-                ls_token_ids = [corpus[id1]["token_indices"], corpus[id2]["token_indices"]]
-
-                token_ids = self._convert_to_bert_input_representation(ls_token_ids)
-                data.append(
-                    {
-                        "segments": segs,
-                        "lists_of_token_indices": ls_token_ids,
-                        "token_indices": token_ids,
-                        "is_next": is_next
-                    }
-                )
-
-        # Each input contains a pair of natural sentences,
-        # either sampled from a contiguous portion of one document or from separate documents.
-        # Since these inputs are significantly shorter than 512 tokens,
-        # we increase the batch size so that the total number of tokens remains similar to "SEGMENT-PAIR" + NSP.
-        elif self.mode == "sentence_pair":
-            for id1 in range(len(corpus) - 1):
-                if random.random() < 0.5:
-                    is_next = True
-                    id2 = id1 + 1
-                else:
-                    is_next = False
-                    id2 = random.randrange(len(corpus))
-                sents = [corpus[id1]["sentence"], corpus[id2]["sentence"]]
-                ls_token_ids = [corpus[id1]["token_indices"], corpus[id2]["token_indices"]]
-
-                token_ids = self._convert_to_bert_input_representation(ls_token_ids)
-                data.append(
-                    {
-                        "sentences": sents,
-                        "lists_of_token_indices": ls_token_ids,
-                        "token_indices": token_ids,
-                        "is_next": is_next
-                    }
-                )
-
-        elif self.mode == "full_sentences":
+        if self.mode == "full_sentences":
             sents = [corpus[0]["sentence"]]
             ls_token_ids = [corpus[0]["token_indices"]]
             for id_ in range(1, len(corpus)):
@@ -250,29 +196,7 @@ class BookCorpusForRoBERTa(Dataset):
 
                 # Each input is packed with full sentences sampled contiguously
                 # from one or more documents, such that the total length is at most 512 tokens.
-                if len(sum(ls_token_ids, list())) + len(corpus[id_]["token_indices"]) > self.max_len - 2 or\
-                id_ == len(corpus) - 1:
-                    token_ids = self._convert_to_bert_input_representation(ls_token_ids)
-                    data.append(
-                        {"sentences": sents, "lists_of_token_indices": ls_token_ids, "token_indices": token_ids}
-                    )
-
-                    sents = list()
-                    ls_token_ids = list()
-                sents.append(corpus[id_]["sentence"])
-                ls_token_ids.append(corpus[id_]["token_indices"])
-
-        # "Inputs sampled near the end of a document may be shorter than 512 tokens,
-        # so we dynamically increase the batch size in these cases
-        # to achieve a similar number of total tokens as 'FULL-SENTENCES'."
-        else: # `"doc_sentences"`
-            sents = [corpus[0]["sentence"]]
-            ls_token_ids = [corpus[0]["token_indices"]]
-            for id_ in range(1, len(corpus)):
-                # "except that they may not cross document boundaries.
-                # Inputs are constructed similarly to 'FULL-SENTENCES'",
-                if corpus[id_ - 1]["document"] != corpus[id_]["document"] or\
-                len(sum(ls_token_ids, list())) + len(corpus[id_]["token_indices"]) > self.max_len - 2 or\
+                if len(sum(ls_token_ids, list())) + len(corpus[id_]["token_indices"]) > self.seq_len - 2 or\
                 id_ == len(corpus) - 1:
                     token_ids = self._convert_to_bert_input_representation(ls_token_ids)
                     data.append(
@@ -297,9 +221,4 @@ class BookCorpusForRoBERTa(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        if self.mode in ["segment_pair", "sentence_pair"]:
-            token_ids = torch.as_tensor(self.data[idx]["token_indices"])
-            seg_ids = self._get_segment_indices_from_token_indices(token_ids)
-            return token_ids, seg_ids, torch.as_tensor(self.data[idx]["is_next"])
-        else:
-            return torch.as_tensor(self.data[idx]["token_indices"])
+        return torch.as_tensor(self.data[idx]["token_indices"])
