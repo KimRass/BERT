@@ -52,7 +52,7 @@ class BookCorpusForBERT(Dataset):
         for idx in tqdm(range(0, len(self.lines), self.chunk_size)):
             # encoding = self.tokenizer(self.lines[idx: idx + self.chunk_size])
             # self.token_ids_ls.extend([i[1: -1] for i in encoding["input_ids"]])
-            encoding = self.tokenizer.encode_batch(self.lines[idx: idx + self.chunk_size])
+            encoding = self.tokenizer.encode(self.lines[idx: idx + self.chunk_size])
             self.token_ids_ls.extend([i.ids for i in encoding])
         print("Completed")
 
