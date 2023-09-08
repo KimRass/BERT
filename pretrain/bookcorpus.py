@@ -50,10 +50,7 @@ class BookCorpusForBERT(Dataset):
         print("Tokenizing BookCorpus...")
         self.token_ids_ls = list()
         for idx in tqdm(range(0, len(self.lines), self.chunk_size)):
-            encoding = self.tokenizer.batch_encode_plus(
-                self.lines[idx: idx + self.chunk_size], truncation=True, max_length=self.seq_len,
-            )
-            self.token_ids_ls.extend([i[1: -1] for i in encoding["input_ids"]])
+            self.token_ids_ls.extend(self._encode(self.lines[idx: idx + self.chunk_size]))
         print("Completed")
 
     def _sample_latter_sentence(self, idx):
@@ -79,6 +76,16 @@ class BookCorpusForBERT(Dataset):
         token_ids += [self.pad_id] * (self.seq_len - len(token_ids))
         return torch.as_tensor(token_ids)
 
+    def _encode(self, x):
+        encoding = self.tokenizer(
+            x,
+            truncation=True,
+            max_length=512,
+            return_token_type_ids=False,
+            return_attention_mask=False,
+        )
+        return [token_ids[1: -1] for token_ids in encoding["input_ids"]]
+
     def __len__(self):
         if self.tokenize_in_advance:
             return len(self.token_ids_ls) - 1
@@ -91,13 +98,9 @@ class BookCorpusForBERT(Dataset):
             latter_token_ids, is_next = self._sample_latter_sentence(idx)
         else:
             former_line = self.lines[idx]
-            former_token_ids = self.tokenizer.encode(
-                former_line, truncation=True, seq_length=self.seq_len,
-            )[1: -1]
+            former_token_ids = self._encode(former_line)
             latter_line, is_next = self._sample_latter_sentence(idx)
-            latter_token_ids = self.tokenizer.encode(
-                latter_line, truncation=True, seq_length=self.seq_len,
-            )[1: -1]
+            latter_token_ids = self._encode(latter_line)
 
         token_ids = self._to_bert_input(
             former_token_ids=former_token_ids, latter_token_ids=latter_token_ids,
@@ -151,7 +154,7 @@ class BookCorpusForRoBERTa(Dataset):
                     sents = self._disambiguate_sentence_boundary(line)
                     for sent in sents:
                         token_ids = self.tokenizer.encode(
-                            sent, truncation=True, seq_length=self.seq_len,
+                            sent, truncation=True, max_length=self.seq_len,
                         )[1: -1]
                         self.lines.append(
                             {
@@ -163,7 +166,7 @@ class BookCorpusForRoBERTa(Dataset):
                         )
                 else:
                     token_ids = self.tokenizer.encode(
-                        line, truncation=True, seq_length=self.seq_len,
+                        line, truncation=True, max_length=self.seq_len,
                     )[1: -1]
                     self.lines.append(
                         {
