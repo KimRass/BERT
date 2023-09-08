@@ -129,11 +129,9 @@ class BookCorpusForRoBERTa(Dataset):
         self.sep_id = tokenizer.sep_token_id
         self.pad_id = tokenizer.pad_token_id
 
-        if mode == "segment_pair":
-            self._parse(perform_sbd=False)
-        else:
+        if mode == "full_sentences":
             self._parse(perform_sbd=True)
-        self.data = self._get_data(self.lines)
+        self._get_data()
 
     def _disambiguate_sentence_boundary(self, text):
         segmented = self.segmentor.segment(text)
@@ -160,7 +158,7 @@ class BookCorpusForRoBERTa(Dataset):
                                 "document": str(doc_path),
                                 "paragraph": line,
                                 "sentence": sent,
-                                "token_indices": token_ids
+                                "token_ids": token_ids
                             }
                         )
                 else:
@@ -171,54 +169,46 @@ class BookCorpusForRoBERTa(Dataset):
                         {
                             "document": str(doc_path),
                             "paragraph": line,
-                            "token_indices": token_ids
+                            "token_ids": token_ids
                         }
                     )
 
-    def _convert_to_bert_input_representation(self, ls_token_ids):
-        token_ids = sum(ls_token_ids, list())
+    def _to_bert_input(self, token_ids_ls):
+        token_ids = sum(token_ids_ls, list())
         token_ids = token_ids[: self.seq_len - 2]
         token_ids = [self.cls_id] + token_ids + [self.sep_id]
         token_ids += [self.pad_id] * (self.seq_len - len(token_ids))
         return token_ids
 
-    def _get_data(self, corpus):
-        data = list()
+    def _get_data(self):
+        self.data = list()
         if self.mode == "full_sentences":
-            sents = [corpus[0]["sentence"]]
-            ls_token_ids = [corpus[0]["token_indices"]]
-            for id_ in range(1, len(corpus)):
+            sents = [self.lines[0]["sentence"]]
+            token_ids_ls = [self.lines[0]["token_ids"]]
+            for id_ in range(1, len(self.lines)):
                 # "Inputs may cross document boundaries. When we reach the end of one document,
                 # we begin sampling sentences from the next document
                 # and add an extra separator token between documents."
-                if corpus[id_ - 1]["document"] != corpus[id_]["document"]:
-                    ls_token_ids.append([self.sep_id])
+                if self.lines[id_ - 1]["document"] != self.lines[id_]["document"]:
+                    token_ids_ls.append([self.sep_id])
 
                 # Each input is packed with full sentences sampled contiguously
                 # from one or more documents, such that the total length is at most 512 tokens.
-                if len(sum(ls_token_ids, list())) + len(corpus[id_]["token_indices"]) > self.seq_len - 2 or\
-                id_ == len(corpus) - 1:
-                    token_ids = self._convert_to_bert_input_representation(ls_token_ids)
-                    data.append(
-                        {"sentences": sents, "lists_of_token_indices": ls_token_ids, "token_indices": token_ids}
+                if len(sum(token_ids_ls, list())) + len(self.lines[id_]["token_ids"]) > self.seq_len - 2 or\
+                    id_ == len(self.lines) - 1:
+                    token_ids = self._to_bert_input(token_ids_ls)
+                    self.data.append(
+                        {"sentences": sents, "lists_of_token_ids": token_ids_ls, "token_ids": token_ids}
                     )
 
                     sents = list()
-                    ls_token_ids = list()
-                sents.append(corpus[id_]["sentence"])
-                ls_token_ids.append(corpus[id_]["token_indices"])
-        return data
-
-    def _get_segment_indices_from_token_indices(self, token_ids):
-        seg_ids = torch.zeros_like(token_ids, dtype=token_ids.dtype, device=token_ids.device)
-        is_sep = (token_ids == self.sep_id)
-        if is_sep.sum() == 2:
-            a, b = is_sep.nonzero()
-            seg_ids[a + 1: b + 1] = 1
-        return seg_ids
+                    token_ids_ls = list()
+                sents.append(self.lines[id_]["sentence"])
+                token_ids_ls.append(self.lines[id_]["token_ids"])
+        return self.datadata
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
-        return torch.as_tensor(self.data[idx]["token_indices"])
+        return torch.as_tensor(self.data[idx]["token_ids"])
