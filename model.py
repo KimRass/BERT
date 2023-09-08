@@ -166,6 +166,7 @@ class BERT(nn.Module):
         self.pos_embed = PositionEmbedding(max_len=max_len, hidden_size=hidden_size)
         self.seg_embed = SegmentEmbedding(hidden_size)
 
+        self.norm = nn.LayerNorm(hidden_size)
         self.embed_drop = nn.Dropout(drop_prob)
 
         self.tf_block = TransformerBlock(
@@ -189,6 +190,8 @@ class BERT(nn.Module):
         x = self.token_embed(token_ids)
         x += self.pos_embed(pos)
         x += self.seg_embed(seg_ids)
+
+        x = self.norm(x)
         x = self.embed_drop(x)
 
         pad_mask = self._get_pad_mask(token_ids)
