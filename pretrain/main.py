@@ -11,7 +11,7 @@ import argparse
 import pretrain.config as config
 from utils import get_elapsed_time
 from model import BERTForPretraining
-from pretrain.wordpiece import load_bert_tokenizer, load_fast_bert_tokenizer
+from pretrain.wordpiece import load_fast_bert_tokenizer
 from pretrain.bookcorpus import BookCorpusForBERT
 from pretrain.masked_language_model import MaskedLanguageModel
 from pretrain.loss import LossForPretraining
@@ -57,7 +57,6 @@ if __name__ == "__main__":
     print(f"N_WORKERS = {config.N_WORKERS}")
     print(f"MAX_LEN = {config.MAX_LEN}")
     print(f"SEQ_LEN = {config.SEQ_LEN}")
-    print(f"TOKENIZE_IN_ADVANCE = {args.tokenize_in_advance}")
 
     # "We train with batch size of 256 sequences (256 sequences * 512 tokens
     # = 128,000 tokens/batch) for 1,000,000 steps, which is approximately 40 epochs
@@ -176,7 +175,7 @@ if __name__ == "__main__":
                     print(f"[ {step:,}/{N_STEPS:,} ][ {get_elapsed_time(start_time)} ]", end="")
                     print(f"[ NSP loss: {accum_nsp_loss / step_cnt:.4f} ]", end="")
                     print(f"[ NSP acc: {accum_nsp_acc / step_cnt:.3f} ]", end="")
-                    print(f"[ MLM loss: {accum_mlm_loss / step_cnt:.6f} ]", end="")
+                    print(f"[ MLM loss: {accum_mlm_loss / step_cnt:.4f} ]", end="")
                     print(f"[ MLM acc: {accum_mlm_acc / step_cnt:.3f} ]")
 
                     start_time = time()
