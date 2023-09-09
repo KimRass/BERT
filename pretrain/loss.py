@@ -15,6 +15,6 @@ class LossForPretraining(nn.Module):
     def forward(self, pred_is_next, gt_is_next, pred_token_ids, gt_token_ids, select_mask):
         nsp_loss = self.ce(pred_is_next, gt_is_next)
 
-        gt_token_ids[select_mask] = -100
+        gt_token_ids[~select_mask] = -100
         mlm_loss = self.ce(pred_token_ids.view(-1, self.vocab_size), gt_token_ids.view(-1))
         return nsp_loss, mlm_loss

@@ -29,12 +29,6 @@ class MaskedLanguageModel(object):
 
 
     def __call__(self, gt_token_ids):
-        # vocab_size = 30
-        # no_mask_token_ids = list()
-        # no_mask_token_ids = [0, 1, 2, 3, 4]
-        # gt_token_ids = torch.randint(high=vocab_size, size=(2, 128))
-        # gt_token_ids[:, 0] = 1
-
         masked_token_ids = gt_token_ids.clone()
 
         rand_tensor = torch.rand(masked_token_ids.shape, device=masked_token_ids.device)
@@ -68,9 +62,6 @@ class MaskedLanguageModel(object):
             device=masked_token_ids.device,
         )
         masked_token_ids[randomize_mask.nonzero(as_tuple=True)] = random_token_ids
-
-        # new_gt_token_ids = gt_token_ids.clone()
-        # new_gt_token_ids[select_mask] = -100
         return masked_token_ids, select_mask
 
 
