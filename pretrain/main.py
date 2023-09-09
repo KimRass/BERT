@@ -150,7 +150,8 @@ if __name__ == "__main__":
                 masked_token_ids, select_mask = mlm(gt_token_ids)
 
                 pred_is_next, pred_token_ids = model(token_ids=masked_token_ids, seg_ids=seg_ids)
-                nsp_loss, mlm_loss = crit(
+                # nsp_loss, mlm_loss = crit(
+                mlm_loss = crit(
                     # pred_is_next=pred_is_next,
                     # gt_is_next=gt_is_next,
                     pred_token_ids=pred_token_ids,
