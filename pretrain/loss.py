@@ -20,8 +20,6 @@ class BERTPretrainingLoss(nn.Module):
 
 
 class RoBERTaPretrainingLoss(nn.Module):
-    # "The training loss is the sum of the mean masked LM likelihood
-        # and the mean next sentence prediction likelihood."
     def __init__(self, vocab_size):
         super().__init__()
 

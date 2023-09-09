@@ -2,23 +2,14 @@
     # https://github.com/codertimo/BERT-pytorch/blob/master/bert_pytorch/dataset/dataset.py
     # https://d2l.ai/chapter_natural-language-processing-pretraining/bert-dataset.html
 
-# "For the pre-training corpus we use the BookCorpus (800M words) (Zhu et al., 2015)
-# and English Wikipedia (2,500M words)."
-# "For Wikipedia we extract only the text passages and ignore lists, tables, and headers.
-# It is critical to use a document-level corpus rather than a shuffled sentence-level corpus
-# such as the Billion Word Benchmark."
 import os
 import torch
 from torch.utils.data import Dataset
 import random
-from tqdm.auto import tqdm
-from pathlib import Path
-import pysbd
-import re
 
 import config
 from pretrain.wordpiece import load_fast_bert_tokenizer
-from utils import _token_ids_to_segment_ids, REGEX
+from utils import _token_ids_to_segment_ids
 from pretrain.wordpiece import parse
 
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
@@ -38,6 +29,11 @@ def _encode(x, tokenizer):
         return [token_ids[1: -1] for token_ids in encoding["input_ids"]]
 
 
+# "For the pre-training corpus we use the BookCorpus (800M words) (Zhu et al., 2015)
+# and English Wikipedia (2,500M words)."
+# "For Wikipedia we extract only the text passages and ignore lists, tables, and headers.
+# It is critical to use a document-level corpus rather than a shuffled sentence-level corpus
+# such as the Billion Word Benchmark."
 class BookCorpusForBERT(Dataset):
     def __init__(
         self,
@@ -134,7 +130,7 @@ class BookCorpusForRoBERTa(Dataset):
                 
             cur_doc, line = self.lines[idx]
             token_ids = _encode(line, tokenizer=self.tokenizer)
-            if len(new_token_ids) + len(token_ids) > self.seq_len - 2:
+            if len(new_token_ids) + len(token_ids) >= self.seq_len - 2:
                 break
 
             if prev_doc != cur_doc:
