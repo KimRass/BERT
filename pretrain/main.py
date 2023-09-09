@@ -12,9 +12,9 @@ import pretrain.config as config
 from utils import get_elapsed_time
 from model import BERTForPretraining
 from pretrain.wordpiece import load_fast_bert_tokenizer
-from pretrain.bookcorpus import BookCorpusForBERT
+from pretrain.bookcorpus import BookCorpusForBERT, BookCorpusForRoBERTa
 from pretrain.masked_language_model import MaskedLanguageModel
-from pretrain.loss import LossForPretraining
+from pretrain.loss import BERTPretrainingLoss, RoBERTaPretrainingLoss
 from pretrain.evalute import get_nsp_acc, get_mlm_acc
 
 
@@ -62,17 +62,16 @@ if __name__ == "__main__":
     # = 128,000 tokens/batch) for 1,000,000 steps, which is approximately 40 epochs
     # over the 3.3 billion word corpus." (Comment: 256 * 512 * 1,000,000 / 3,300,000,000
     # = 39.7)
-    # 학습이 너무 오래 걸리므로 절반 만큼만 학습하겠습니다.
     N_STEPS = (256 * 512 * 1_000_000) // (args.batch_size * config.SEQ_LEN)
     print(f"N_STEPS = {N_STEPS:,}", end="\n\n")
 
     # tokenizer = load_bert_tokenizer(config.VOCAB_PATH)
     tokenizer = load_fast_bert_tokenizer(vocab_dir=config.VOCAB_DIR)
-    train_ds = BookCorpusForBERT(
+    # train_ds = BookCorpusForBERT(
+    train_ds = BookCorpusForRoBERTa(
         epubtxt_dir=args.epubtxt_dir,
         tokenizer=tokenizer,
         seq_len=config.SEQ_LEN,
-        tokenize_in_advance=args.tokenize_in_advance,
     )
     train_dl = DataLoader(
         train_ds,
@@ -113,7 +112,8 @@ if __name__ == "__main__":
         weight_decay=config.WEIGHT_DECAY,
     )
 
-    crit = LossForPretraining(vocab_size=config.VOCAB_SIZE)
+    # crit = BERTPretrainingLoss(vocab_size=config.VOCAB_SIZE)
+    crit = RoBERTaPretrainingLoss(vocab_size=config.VOCAB_SIZE)
 
     ### Resume
     if args.ckpt_path is not None:
@@ -132,56 +132,58 @@ if __name__ == "__main__":
 
     print("Training...")
     start_time = time()
-    accum_nsp_loss = 0
+    # accum_nsp_loss = 0
+    # accum_nsp_acc = 0
     accum_mlm_loss = 0
-    accum_nsp_acc = 0
     accum_mlm_acc = 0
     step_cnt = 0
     while True:
-        for gt_token_ids, seg_ids, gt_is_next in train_dl:
+        # for gt_token_ids, seg_ids, gt_is_next in train_dl:
+        for gt_token_ids, seg_ids in train_dl:
             if step < N_STEPS:
                 step +=1
 
                 gt_token_ids = gt_token_ids.to(config.DEVICE)
                 seg_ids = seg_ids.to(config.DEVICE)
-                gt_is_next = gt_is_next.to(config.DEVICE)
+                # gt_is_next = gt_is_next.to(config.DEVICE)
 
                 masked_token_ids, select_mask = mlm(gt_token_ids)
 
                 pred_is_next, pred_token_ids = model(token_ids=masked_token_ids, seg_ids=seg_ids)
                 nsp_loss, mlm_loss = crit(
-                    pred_is_next=pred_is_next,
-                    gt_is_next=gt_is_next,
+                    # pred_is_next=pred_is_next,
+                    # gt_is_next=gt_is_next,
                     pred_token_ids=pred_token_ids,
                     gt_token_ids=gt_token_ids,
                     select_mask=select_mask,
                 )
-                loss = nsp_loss + mlm_loss
+                # loss = nsp_loss + mlm_loss
+                loss = mlm_loss
 
                 optim.zero_grad()
                 loss.backward()
                 optim.step()
 
-                accum_nsp_loss += nsp_loss.item()
+                # accum_nsp_loss += nsp_loss.item()
                 accum_mlm_loss += mlm_loss.item()
 
-                nsp_acc = get_nsp_acc(pred_is_next=pred_is_next, gt_is_next=gt_is_next)
+                # nsp_acc = get_nsp_acc(pred_is_next=pred_is_next, gt_is_next=gt_is_next)
+                # accum_nsp_acc += nsp_acc
                 mlm_acc = get_mlm_acc(pred_token_ids=pred_token_ids, gt_token_ids=gt_token_ids)
-                accum_nsp_acc += nsp_acc
                 accum_mlm_acc += mlm_acc
                 step_cnt += 1
 
                 if (step % (config.N_CKPT_SAMPLES // args.batch_size) == 0) or (step == N_STEPS):
                     print(f"[ {step:,}/{N_STEPS:,} ][ {get_elapsed_time(start_time)} ]", end="")
-                    print(f"[ NSP loss: {accum_nsp_loss / step_cnt:.4f} ]", end="")
-                    print(f"[ NSP acc: {accum_nsp_acc / step_cnt:.3f} ]", end="")
+                    # print(f"[ NSP loss: {accum_nsp_loss / step_cnt:.4f} ]", end="")
+                    # print(f"[ NSP acc: {accum_nsp_acc / step_cnt:.3f} ]", end="")
                     print(f"[ MLM loss: {accum_mlm_loss / step_cnt:.4f} ]", end="")
                     print(f"[ MLM acc: {accum_mlm_acc / step_cnt:.3f} ]")
 
                     start_time = time()
-                    accum_nsp_loss = 0
+                    # accum_nsp_loss = 0
+                    # accum_nsp_acc = 0
                     accum_mlm_loss = 0
-                    accum_nsp_acc = 0
                     accum_mlm_acc = 0
                     step_cnt = 0
 

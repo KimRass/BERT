@@ -6,7 +6,6 @@ from tokenizers import Tokenizer, normalizers
 from tokenizers.models import WordPiece
 from tokenizers.normalizers import NFD, Lowercase, StripAccents
 from tokenizers.pre_tokenizers import Whitespace
-from tokenizers.processors import TemplateProcessing
 from tokenizers.trainers import WordPieceTrainer
 from tokenizers import decoders
 from pathlib import Path
@@ -29,7 +28,7 @@ def get_args():
     return args
 
 
-def parse(epubtxt_dir):
+def parse(epubtxt_dir, with_document=False):
     print("Parsing BookCorpus...")
     lines = list()
     for doc_path in tqdm(list(Path(epubtxt_dir).glob("*.txt"))):
@@ -38,7 +37,10 @@ def parse(epubtxt_dir):
                 line = line.strip()
                 if (not line) or (re.search(pattern=REGEX, string=line)) or (line.count(" ") < 1):
                     continue
-                lines.append(line)
+                if not with_document:
+                    lines.append(line)
+                else:
+                    lines.append((doc_path.name, line))
     print("Completed.")
     print(f"Number of paragraphs: {len(lines):,}")
     return lines

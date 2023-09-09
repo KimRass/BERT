@@ -16,10 +16,26 @@ from pathlib import Path
 import pysbd
 import re
 
+import config
+from pretrain.wordpiece import load_fast_bert_tokenizer
 from utils import _token_ids_to_segment_ids, REGEX
 from pretrain.wordpiece import parse
 
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
+
+
+def _encode(x, tokenizer):
+    encoding = tokenizer(
+        x,
+        truncation=True,
+        max_length=512,
+        return_token_type_ids=False,
+        return_attention_mask=False,
+    )
+    if isinstance(x, str):
+        return encoding["input_ids"][1: -1]
+    else:
+        return [token_ids[1: -1] for token_ids in encoding["input_ids"]]
 
 
 class BookCorpusForBERT(Dataset):
@@ -51,35 +67,27 @@ class BookCorpusForBERT(Dataset):
         return latter_line, torch.as_tensor(is_next)
 
     def _to_bert_input(self, former_token_ids, latter_token_ids):
-        ### Add '[CLS]' and '[SEP]' tokens.
-        token_ids = [self.cls_id] + former_token_ids[: self.seq_len - 3] + [self.sep_id]\
-            + latter_token_ids
-        token_ids = token_ids[: self.seq_len - 1] + [self.sep_id]
-        ### Pad.
-        token_ids += [self.pad_id] * (self.seq_len - len(token_ids))
-        return torch.as_tensor(token_ids)
-
-    def _encode(self, x):
-        encoding = self.tokenizer(
-            x,
-            truncation=True,
-            max_length=512,
-            return_token_type_ids=False,
-            return_attention_mask=False,
-        )
-        if isinstance(x, str):
-            return encoding["input_ids"][1: -1]
+        token_ids = former_token_ids[: self.seq_len - 2]
+        # Add "[CLS]" and the first "[SEP]" tokens.
+        token_ids = [self.cls_id] + token_ids + [self.sep_id]
+        if len(token_ids) >= self.seq_len:
+            token_ids = token_ids[: self.seq_len]
         else:
-            return [token_ids[1: -1] for token_ids in encoding["input_ids"]]
+            if len(token_ids) < self.seq_len - 1:
+                token_ids += latter_token_ids
+                token_ids = token_ids[: self.seq_len - 1]
+                token_ids += [self.sep_id] # Add the second "[SEP]" token.
+            token_ids += [self.pad_id] * (self.seq_len - len(token_ids)) # Pad.
+        return torch.as_tensor(token_ids)
 
     def __len__(self):
         return len(self.lines) - 1
 
     def __getitem__(self, idx):
         former_line = self.lines[idx]
-        former_token_ids = self._encode(former_line)
+        former_token_ids = _encode(former_line, tokenizer=self.tokenizer)
         latter_line, is_next = self._sample_latter_sentence(idx)
-        latter_token_ids = self._encode(latter_line)
+        latter_token_ids = _encode(latter_line, tokenizer=self.tokenizer)
 
         token_ids = self._to_bert_input(
             former_token_ids=former_token_ids, latter_token_ids=latter_token_ids,
@@ -101,93 +109,49 @@ class BookCorpusForRoBERTa(Dataset):
         self.seq_len = seq_len
         self.mode = mode
 
-        self.segmentor = pysbd.Segmenter(language="en", clean=False)
-
         self.unk_id = tokenizer.unk_token_id
         self.cls_id = tokenizer.cls_token_id
         self.sep_id = tokenizer.sep_token_id
         self.pad_id = tokenizer.pad_token_id
 
-        if mode == "full_sentences":
-            self._parse(perform_sbd=True)
-        self._get_data()
+        self.lines = parse(epubtxt_dir, with_document=True)
 
-    def _disambiguate_sentence_boundary(self, text):
-        segmented = self.segmentor.segment(text)
-        return [i.strip() for i in segmented]
-    
-    def _parse(self, perform_sbd):
-        print("Parsing BookCorpus...")
-        self.lines = list()
-        for doc_path in tqdm(list(Path(self.epubtxt_dir).glob("*.txt"))):
-            with open(doc_path, mode="r", encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if (not line) or (re.search(pattern=REGEX, string=line)) or (line.count(" ") < 1):
-                        continue
-
-                if perform_sbd:
-                    sents = self._disambiguate_sentence_boundary(line)
-                    for sent in sents:
-                        token_ids = self.tokenizer.encode(
-                            sent, truncation=True, max_length=self.seq_len,
-                        )[1: -1]
-                        self.lines.append(
-                            {
-                                "document": str(doc_path),
-                                "paragraph": line,
-                                "sentence": sent,
-                                "token_ids": token_ids
-                            }
-                        )
-                else:
-                    token_ids = self.tokenizer.encode(
-                        line, truncation=True, max_length=self.seq_len,
-                    )[1: -1]
-                    self.lines.append(
-                        {
-                            "document": str(doc_path),
-                            "paragraph": line,
-                            "token_ids": token_ids
-                        }
-                    )
-
-    def _to_bert_input(self, token_ids_ls):
-        token_ids = sum(token_ids_ls, list())
-        token_ids = token_ids[: self.seq_len - 2]
+    def _to_bert_input(self, token_ids):
+        # Add "[CLS]" and the first "[SEP]" tokens.
         token_ids = [self.cls_id] + token_ids + [self.sep_id]
-        token_ids += [self.pad_id] * (self.seq_len - len(token_ids))
-        return token_ids
-
-    def _get_data(self):
-        self.data = list()
-        if self.mode == "full_sentences":
-            sents = [self.lines[0]["sentence"]]
-            token_ids_ls = [self.lines[0]["token_ids"]]
-            for id_ in range(1, len(self.lines)):
-                # "Inputs may cross document boundaries. When we reach the end of one document,
-                # we begin sampling sentences from the next document
-                # and add an extra separator token between documents."
-                if self.lines[id_ - 1]["document"] != self.lines[id_]["document"]:
-                    token_ids_ls.append([self.sep_id])
-
-                # Each input is packed with full sentences sampled contiguously
-                # from one or more documents, such that the total length is at most 512 tokens.
-                if len(sum(token_ids_ls, list())) + len(self.lines[id_]["token_ids"]) > self.seq_len - 2 or\
-                    id_ == len(self.lines) - 1:
-                    token_ids = self._to_bert_input(token_ids_ls)
-                    self.data.append(
-                        {"sentences": sents, "lists_of_token_ids": token_ids_ls, "token_ids": token_ids}
-                    )
-
-                    sents = list()
-                    token_ids_ls = list()
-                sents.append(self.lines[id_]["sentence"])
-                token_ids_ls.append(self.lines[id_]["token_ids"])
-        return self.datadata
+        token_ids += [self.pad_id] * (self.seq_len - len(token_ids)) # Pad.
+        return torch.as_tensor(token_ids)
 
     def __len__(self):
-        return len(self.data)
+        return len(self.lines)
 
     def __getitem__(self, idx):
-        return torch.as_tensor(self.data[idx]["token_ids"])
+        new_token_ids = list()
+        prev_doc = self.lines[idx][0]
+        while True:
+            cur_doc, line = self.lines[idx]
+            token_ids = _encode(line, tokenizer=tokenizer)
+            if len(new_token_ids) + len(token_ids) > self.seq_len - 2:
+                new_token_ids = self._to_bert_input(new_token_ids)
+                break
+
+            if prev_doc != cur_doc:
+                new_token_ids.append(self.sep_id)
+
+            new_token_ids.extend(token_ids)
+            prev_doc = cur_doc
+            idx += 1
+
+        seg_ids = _token_ids_to_segment_ids(token_ids=new_token_ids, sep_id=self.sep_id)
+        return token_ids, seg_ids
+
+
+if __name__ == "__main__":
+    tokenizer = load_fast_bert_tokenizer(vocab_dir=config.VOCAB_DIR)
+    ds = BookCorpusForRoBERTa(
+        epubtxt_dir="/Users/jongbeomkim/Documents/datasets/bookcorpus/epubtxt",
+        # epubtxt_dir="/Users/jongbeomkim/Documents/datasets/bookcorpus_subset/epubtxt",
+        tokenizer=tokenizer,
+        seq_len=config.SEQ_LEN,
+    )
+    print(len(ds))
