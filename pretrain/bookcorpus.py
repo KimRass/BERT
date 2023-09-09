@@ -130,7 +130,7 @@ class BookCorpusForRoBERTa(Dataset):
         prev_doc = self.lines[idx][0]
         while True:
             cur_doc, line = self.lines[idx]
-            token_ids = _encode(line, tokenizer=tokenizer)
+            token_ids = _encode(line, tokenizer=self.tokenizer)
             if len(new_token_ids) + len(token_ids) > self.seq_len - 2:
                 new_token_ids = self._to_bert_input(new_token_ids)
                 break
@@ -143,7 +143,7 @@ class BookCorpusForRoBERTa(Dataset):
             idx += 1
 
         seg_ids = _token_ids_to_segment_ids(token_ids=new_token_ids, sep_id=self.sep_id)
-        return token_ids, seg_ids
+        return new_token_ids, seg_ids
 
 
 if __name__ == "__main__":
