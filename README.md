@@ -1,3 +1,6 @@
+# BERT from scratch
+- Please make sure that I was not able to complete pre-training or fine-tuning the model because of my compute environment but I checked that both pre-training and fine-tuning are well performed.
+
 # Paper Reading
 - [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://arxiv.org/pdf/1810.04805.pdf)
 
