@@ -286,7 +286,7 @@ class MultipleChoiceHead(nn.Module):
 
         self.n_choices = n_choices
 
-        self.head_proj = nn.Linear(hidden_size, 1)
+        self.head_proj = nn.Linear(hidden_size, n_choices)
 
     def forward(self, x):
         x = x[:, 0, :]
