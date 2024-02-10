@@ -13,7 +13,6 @@ from utils import get_elapsed_time
 from pretrain.wordpiece import load_bert_tokenizer, load_fast_bert_tokenizer
 from model import BERTForMultipleChoice
 from finetune.swag import SWAGForBERT
-from finetune.evaluate import TopKAccuracy
 
 
 def get_args():
@@ -42,7 +41,7 @@ def save_checkpoint(step, model, optim, ckpt_path):
 
 
 @torch.no_grad()
-def validate(val_dl, model, metric):
+def validate(val_dl, model):
     print(f"""Validating...""")
     model.eval()
     sum_acc = 0
@@ -55,7 +54,7 @@ def validate(val_dl, model, metric):
         seg_ids = seg_ids.view(-1, config.SEQ_LEN)
 
         pred = model(token_ids=token_ids, seg_ids=seg_ids)
-        acc = metric(pred=pred, gt=gt)
+        acc = model.get_top_k_acc(pred=pred, gt=gt)
         sum_acc += acc
     avg_acc = sum_acc / len(val_dl)
     print(f"""Average accuracy: {avg_acc:.3f}""")
@@ -124,7 +123,6 @@ if __name__ == "__main__":
     optim = Adam(model.parameters(), lr=config.LR)
 
     crit = nn.CrossEntropyLoss(reduction="mean")
-    metric = TopKAccuracy(k=1) 
 
     ### Resume
     if args.ckpt_path is not None:
@@ -172,7 +170,7 @@ if __name__ == "__main__":
                 accum_loss = 0
                 step_cnt = 0
 
-                avg_acc = validate(val_dl=val_dl, model=model, metric=metric)
+                avg_acc = validate(val_dl=val_dl, model=model)
             # cur_ckpt_path = config.CKPT_DIR/f"bookcorpus_step_{step}.pth"
             # save_checkpoint(step=step, model=model, optim=optim, ckpt_path=cur_ckpt_path)
             # if prev_ckpt_path.exists():

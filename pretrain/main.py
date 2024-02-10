@@ -14,8 +14,6 @@ from model import BERTForPretraining
 from pretrain.wordpiece import load_fast_bert_tokenizer
 from pretrain.bookcorpus import BookCorpusForBERT
 from pretrain.masked_language_model import MaskedLanguageModel
-from pretrain.loss import PretrainingLoss
-from pretrain.evalute import get_nsp_acc, get_mlm_acc
 
 
 def get_args():
@@ -110,8 +108,6 @@ if __name__ == "__main__":
         weight_decay=config.WEIGHT_DECAY,
     )
 
-    crit = PretrainingLoss(vocab_size=config.VOCAB_SIZE)
-
     ### Resume
     if args.ckpt_path is not None:
         ckpt = torch.load(args.ckpt_path, map_location=config.DEVICE)
@@ -146,7 +142,7 @@ if __name__ == "__main__":
                 masked_token_ids, select_mask = mlm(gt_token_ids)
 
                 pred_is_next, pred_token_ids = model(token_ids=masked_token_ids, seg_ids=seg_ids)
-                nsp_loss, mlm_loss = crit(
+                nsp_loss, mlm_loss = model.get_pretraining_loss(
                     pred_is_next=pred_is_next,
                     gt_is_next=gt_is_next,
                     pred_token_ids=pred_token_ids,
@@ -162,8 +158,8 @@ if __name__ == "__main__":
                 accum_nsp_loss += nsp_loss.item()
                 accum_mlm_loss += mlm_loss.item()
 
-                nsp_acc = get_nsp_acc(pred_is_next=pred_is_next, gt_is_next=gt_is_next)
-                mlm_acc = get_mlm_acc(pred_token_ids=pred_token_ids, gt_token_ids=gt_token_ids)
+                nsp_acc = model.get_nsp_acc(pred_is_next=pred_is_next, gt_is_next=gt_is_next)
+                mlm_acc = model.get_mlm_acc(pred_token_ids=pred_token_ids, gt_token_ids=gt_token_ids)
                 accum_nsp_acc += nsp_acc
                 accum_mlm_acc += mlm_acc
                 step_cnt += 1
