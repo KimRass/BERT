@@ -46,8 +46,8 @@ class BERTEmbedding(nn.Module):
         b, seq_len = token_ids.shape
 
         x = self.token_embed(token_ids)
-        x += self.pos_embed(self.pos[:, : seq_len].repeat(b, 1).to(token_ids.device))
-        x += self.seg_embed(seg_ids)
+        x = x + self.pos_embed(self.pos[:, : seq_len].repeat(b, 1).to(token_ids.device))
+        x = x + self.seg_embed(seg_ids)
 
         x = self.norm(x)
         x = self.embed_drop(x)
@@ -65,8 +65,8 @@ class ResidualConnection(nn.Module):
         skip = x.clone()
         x = self.norm(x)
         x = sublayer(x)
-        x += skip
-        return x
+        x = self.resid_drop(x)
+        return x + skip
 
 
 class MultiHeadAttention(nn.Module):
